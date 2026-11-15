@@ -159,9 +159,18 @@ test('左栏、右栏、以及两栏自己的小标题都吸顶（sticky）', ()
   const STICKY = [/^sticky$/];
   assert.ok(hasDecl('.smb-left__title', 'position', STICKY[0]), '左栏小标题没有吸顶');
   assert.ok(hasDecl('.smb-subject__side .smb-block__title', 'position', STICKY[0]), '右栏（参考资料）小标题没有吸顶');
+  // 主列的「目录」也要吸顶——学生按截图报过「没有固定我标出来的部分」（当时只做了右栏）
+  assert.ok(hasDecl('.smb-subject__main .smb-block__title', 'position', STICKY[0]), '主列（目录）小标题没有吸顶');
   // 吸顶时背景必须不透明，否则下面的条目会从字缝里透出来
   assert.ok(hasDecl('.smb-left__title', 'background', /var\(--smb-panel\)/), '左栏吸顶标题没有不透明背景');
   assert.ok(hasDecl('.smb-subject__side .smb-block__title', 'background', /var\(--/), '右栏吸顶标题没有不透明背景');
+  assert.ok(hasDecl('.smb-subject__main .smb-block__title', 'background', /var\(--/), '主列吸顶标题没有不透明背景');
+});
+
+test('按钮不拆自己的文字：压不下就整排换行，不逐字竖排', () => {
+  // 学生按截图报过「参考资/料」「＋ 加一/份」「刷/新」——那是按钮作为 flex 子项被压窄的结果
+  assert.ok(hasDecl('.smb-btn', 'white-space', /nowrap/), '.smb-btn 没有 white-space: nowrap');
+  assert.ok(hasDecl('.smb-btn', 'flex', /none/), '.smb-btn 没有 flex: none（会跟着父级被压窄）');
 });
 
 /* ── §十 C / §十 D：小节条只显三个；科目主页两栏 ───────────────────────── */
