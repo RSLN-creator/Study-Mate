@@ -97,3 +97,21 @@ test('总检查工具本身能跑，且失败时会给非零码', () => {
   assert.match(text, /process\.exitCode = 1/, '没通过时要给非零退出码');
   assert.match(text, /CHECKS/, '检查项要在表里，方便看有哪些');
 });
+
+test('交接单里的数与源文件一致（引文条数、要点数、题数）', () => {
+  // 交接单写「9 条未核」而源文件是 6 条——**又是一个没算过的数**。
+  // 三十轮里我写错数的次数已经超过十次，每一次都是「估的」而不是「算的」。
+  // 这条让交接单里的关键数字必须由源文件核对。
+  const guide = fs.readFileSync(path.join(ROOT, 'docs/使用/从这里开始.md'), 'utf8').replaceAll('\r\n', '\n');
+
+  const evidence = fs.readFileSync(path.join(ROOT, 'docs/取证/学习方法-文献.md'), 'utf8');
+  const unverified = (evidence.match(/^\| [A-Z][^|]*\|[^|]*\| \*\*未核\*\*/gm) || []).length;
+  const claimed = guide.match(/(\d+) 条如实登记为「未核」/);
+  assert.ok(claimed, '交接单里要写明有多少条未核');
+  assert.equal(Number(claimed[1]), unverified,
+    `交接单写 ${claimed[1]} 条未核，取证记录里是 ${unverified} 条`);
+
+  const paper = fs.readFileSync(path.join(ROOT, 'templates/closed-book/卷子.md'), 'utf8');
+  assert.ok(guide.includes('13 题'), '交接单里三组的题数要和真卷子对得上（各 13 题）');
+  assert.ok(paper.includes('## 一、骨架（20 分）'));
+});
