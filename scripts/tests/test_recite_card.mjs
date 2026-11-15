@@ -119,3 +119,25 @@ test('反证：编造的数字必须被这条判据抓到（子串匹配会让�
   assert.equal(wordHit('9.60'), true, '真在课件里的数要命中');
   assert.equal(wordHit('1.69'), true);
 });
+
+test('要点表必须交代覆盖了哪几节、以及哪一节有意没覆盖', (t) => {
+  // 18 条要点不可能覆盖课件每一节，而「没覆盖」与「漏了」看起来一样。
+  // 实测踩到：`0003` 的第 9 节「手算脚本」没有要点——那一节要的是"跑得起来"，
+  // 背默卡测的是"写得出什么"，两者本来不重合。**这是有意的，但卡上必须写出来**；
+  // 不写，下一个人会以为要点表不全，去补一条编的。
+  const found = pairs();
+  if (found.length === 0) { t.skip('工作区里还没有背默卡'); return; }
+  const problems = [];
+  for (const { card, lesson, name } of found) {
+    const text = fs.readFileSync(card, 'utf8');
+    if (!fs.existsSync(lesson)) continue;
+    const heads = [...fs.readFileSync(lesson, 'utf8').matchAll(/^## (.+)$/gm)]
+      .map((m) => m[1]).filter((h) => !/原文在哪儿|三句要能说出来/.test(h));
+    // 卡上要有一句「覆盖课件 X 节里的 Y 节」或「第 N 节…没有对应的要点」
+    const coverageClaim = /覆盖课件[^。]{0,20}节|没有对应的要点|有意没覆盖/;
+    if (!coverageClaim.test(text) && heads.length > 6) {
+      problems.push(`${name}：课件有 ${heads.length} 节，卡上要交代覆盖到哪几节、哪几节有意没覆盖`);
+    }
+  }
+  assert.deepEqual(problems, [], problems.join('\n'));
+});
