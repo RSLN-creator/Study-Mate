@@ -107,3 +107,31 @@ test('骨架背默卡生成的表是空的（不许把骨架的空行当要点�
   const points = pointsFromCard(fs.readFileSync(CARD, 'utf8').replaceAll('\r\n', '\n'));
   assert.deepEqual(points, [], '骨架里那些 `| P1 | 骨架 | |` 空行不该被当成要点');
 });
+
+test('空表不许给判定（一条都没判时，印「不通过」是假话）', () => {
+  // 使用说明写好之后按原样跑命令时撞到的：生成表、**还没勾**就直接算，
+  // 工具印出 `S1 = 0　95% 区间 [0, 0]` 与 `→ 不通过`。
+  // 那三个数全是"什么都没填"的产物，而「不通过」会被当成判决。
+  // **这和「闸门落在区间内却印不通过」是同一类：输出正确，话说错了。**
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'recite-empty-'));
+  const sheetPath = path.join(dir, '判分表.md');
+  fs.writeFileSync(sheetPath, buildSheet(
+    Array.from({ length: 18 }, (_, i) => ({ id: `P${i + 1}`, 类型: '骨架', 要点: `要点 ${i + 1}` })),
+  ), 'utf8');
+  let out = '';
+  let code = 0;
+  try {
+    out = execFileSync(process.execPath,
+      [path.join(ROOT, 'scripts/tools/recite-from-table.mjs'), sheetPath, '--s2', '2', '--probe', '1'],
+      { encoding: 'utf8' });
+  } catch (error) {
+    out = String(error.stdout || '');
+    code = error.status;
+  }
+  fs.rmSync(dir, { recursive: true, force: true });
+
+  assert.match(out, /一条都还没判/, '空表要明确说「一条都还没判」');
+  assert.doesNotMatch(out, /→ 不通过/, '**空表不许印「不通过」**');
+  assert.doesNotMatch(out, /S1 = 0　/, '空表不许印 S1 = 0——那个 0 是"没填"不是"没学会"');
+  assert.notEqual(code, 0, '空表跑完应当是非零退出，提醒人还没勾');
+});

@@ -204,6 +204,20 @@ function main() {
     ).判定;
   }
 
+  // **一条都没判时不许给判定。** 空表跑出来的 S1 = 0、区间 [0,0]、「→ 不通过」——
+  // 那三个数全是"什么都没填"的产物，而「不通过」会被当成判决。
+  // 这和上一轮那个「闸门落在区间内却印不通过」是同一类：**输出正确，话说错了。**
+  if (answered === 0) {
+    if (args.includes('--json')) {
+      console.log(JSON.stringify({ ...result, 判定: null, 判定说明: '一条都没判——先勾选再算' }, null, 2));
+    } else {
+      console.log(`要点 ${total} 条，**一条都还没判**。`);
+      console.log('先把判分表里的三个方括号勾上（命中 / 部分 / 未中 三选一），再跑这个命令。');
+    }
+    process.exitCode = 1;
+    return;
+  }
+
   if (args.includes('--json')) {
     console.log(JSON.stringify(result, null, 2));
   } else {

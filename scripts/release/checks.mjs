@@ -505,7 +505,11 @@ const groups = {
       // 整条链真跑一遍。第二十四轮发现了「单件全绿、串起来全错」，这条套件就是防它复发。
       // 它抓到的三件事都是单件测试看不见的：闸门落在区间内时工具照样印「不通过」、
       // 区间算法把「部分」密化成整数条、报分单没说「做背默卡就删掉卷子那节」。
-      'scripts/tests/test_recite_pipeline_e2e.mjs',      'scripts/tests/test_recite_sheet.mjs',      'scripts/tests/test_recite_from_table.mjs',      'scripts/tests/test_inspection_record.mjs',      'scripts/tests/test_pending_beats.mjs',      'scripts/tests/test_citation_provenance.mjs',      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
+      // **使用说明里必须有「自己做一次检验」**（`test_usage_guide.mjs`）：前面二十六轮做的所有东西
+      // （卷子 / 判分键 / 背默卡 / 检验记录 / 锚点数据集 / 五套工具）在 `docs/使用/使用说明.md`
+      // 里**一个字都没有提到**。一个学生读完使用说明，不会知道「考考我」存在。
+      // **没有使用说明，等于没做。**
+      'scripts/tests/test_usage_guide.mjs',      'scripts/tests/test_recite_pipeline_e2e.mjs',      'scripts/tests/test_recite_sheet.mjs',      'scripts/tests/test_recite_from_table.mjs',      'scripts/tests/test_inspection_record.mjs',      'scripts/tests/test_pending_beats.mjs',      'scripts/tests/test_citation_provenance.mjs',      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',
