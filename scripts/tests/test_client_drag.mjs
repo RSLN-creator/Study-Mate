@@ -63,13 +63,17 @@ test('宽度偏好落本地：正文档与栏宽各有一个键', () => {
   assert.ok(/setProperty\('--smb-measure'/.test(hook), 'useMeasureWidth 没有把值写到 --smb-measure 上');
 });
 
-test('测宽抓手住在正文列**里面**（定位基准是 .smb-doc 自己，不靠算）', () => {
+test('测宽抓手住在正文列**里面**，而且左右两条边各一个', () => {
   // 上一版把它挂在滚动区上，位置用 right: max(0px, calc((100% - min(100%, var(--smb-measure))) / 2 - 4px))
   // 算出来——calc 里嵌 min、百分比与 em 混算，学生报「完全拖动不了」。能靠 DOM 关系表达的不要靠算。
+  // 学生 2026-11-15 又点了一次：「我是让你看中间那正文！！左右两条竖线能不能拖动」——
+  // 所以是**两条边各一个**，不是只有右边缘那一个。
   const docAt = SOURCE.indexOf("h('article.smb-doc', null,");
-  const handleAt = SOURCE.indexOf('h(MeasureHandle, { measure })');
   assert.ok(docAt >= 0, 'lib/client.js 里找不到 article.smb-doc 的渲染');
-  assert.ok(handleAt > docAt, '抓手要渲染在 article.smb-doc **里面**（在外层就失去定位基准，只能靠算）');
+  for (const side of ['left', 'right']) {
+    const at = SOURCE.indexOf("h(MeasureHandle, { measure, side: '" + side + "' })");
+    assert.ok(at > docAt, `${side} 那条边的抓手要渲染在 article.smb-doc **里面**（在外层就失去定位基准，只能靠算）`);
+  }
   // 而且不许再用「画布宽减列宽折半」那种算法（那是上一版坏掉的原因）。
   // ⚠ 判之前必须**剔掉注释**：注释里正写着那串被废弃的算法当反例，不剔就会匹配到自己
   // （同一条套件在 `.smb-subhead__stats` 的 max-width 上也踩过一次这种误伤）。
@@ -78,10 +82,12 @@ test('测宽抓手住在正文列**里面**（定位基准是 .smb-doc 自己，
     '不该再用 max(0px, calc(...)) 去算抓手的位置——它在滚动容器上没能落到位');
 });
 
-test('居中列拖 d 只挪 d/2，所以测宽必须加 2d（否则跟不住手）', () => {
+test('居中列的两条边：右边往右拖是变宽（+2d），左边往左拖才是变宽（−2d）', () => {
   const measure = bodyOf('MeasureHandle');
-  assert.ok(/2\s*\*\s*\(pendingX\s*-\s*origin\.current\.x\)/.test(measure),
-    'MeasureHandle 的位移没有乘 2——正文档是居中列，右边缘只挪一半，乘 1 会让抓手跑在手后面');
+  assert.ok(/const spread = isLeft \? -2 : 2;/.test(measure),
+    'MeasureHandle 的位移没有按左右分号：居中列两条边各只挪一半，而且左边的符号与右边相反');
+  assert.ok(/origin\.current\.w \+ spread \* \(pendingX - origin\.current\.x\)/.test(measure),
+    'MeasureHandle 的位移没有落到 origin 上（跟不住手）');
 });
 
 test('两条把手都有可拖的真实热区与键盘可达性', () => {

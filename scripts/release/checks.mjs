@@ -275,6 +275,13 @@ const groups = {
       // 「POST 落盘 → 另起一次读仍带得回上次选了 X」（跨请求 = 刷新页面那条）、
       // 冲突拒绝不写盘、主观题自评落盘、题库逐字不变。
       'scripts/tests/test_host_attempts_route.mjs',
+      // 另外两条**写**路由的 Host 半（「三条写入路径」的其余两条）：
+      // POST /api/studymate/progress —— 读完即学完的文本手术式状态写入（注释与笔记一字不动、
+      // 幂等台账、版本栅栏、冲突不落盘）；POST /api/studymate/open —— 用本机默认程序打开
+      // 参考资料 / 在文件管理器里选中（科目 slug 单段、resolve 后前缀比对、realpath 复核、
+      // 逐平台命令）。两条都是「越权写 / 越权开」的反证比正例更重要。
+      'scripts/tests/test_host_progress_route.mjs',
+      'scripts/tests/test_host_open_route.mjs',
       // 纯函数域 lib/core/**：内容格式的解析与锚点题库对账（格式只有一个真相）
       'scripts/tests/test_core_format.mjs',
       'scripts/tests/test_core_anchors.mjs',
@@ -300,6 +307,15 @@ const groups = {
       // 面包屑宽度按全角字算）。
       'scripts/tests/test_client_tokens.mjs',
       'scripts/tests/test_client_typography.mjs',
+      // 规范《阅读端呈现》§九 取值纪律 / §十 交互与可调项：标题阶梯、字重与圆角的允许集、
+      // 正文列测宽引变量（写死 px 就是「拖了等于没拖」）、正文列**左右两条边各一个**抓手且
+      // 都不探出正文列（探出去一格筛出横向滚动条）、左栏四个面板竖排、三处标题吸顶、
+      // 小节条不换行、科目主页两栏。每条都做过注入违规的反证，会红。
+      'scripts/tests/test_client_layout.mjs',
+      // §十 B 的跟手 / 双击复位 / 持久化是**运行时行为**，静态读 CSS 读不出来——这一条只断
+      // **源码形状**（rAF 逐帧合并、收手前补最后一帧、本地键、居中列两条边 ±2d、两个把手的
+      // 角色与键盘可达），拦得住「哪次重构顺手删掉」，拦不住「合并写错了」。如实记着。
+      'scripts/tests/test_client_drag.mjs',
       'scripts/tests/test_client_pure.mjs',
       // #88 三栏几何：ADR-0011 的让位顺序（右栏先拿 / 左栏先让 / 中栏保底 420）与
       // 「并排装不下就把那一栏盖在正文上」的降级。同样是纯函数——「任何画布宽度下都

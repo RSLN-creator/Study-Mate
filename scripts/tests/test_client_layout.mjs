@@ -156,13 +156,44 @@ test('两条抓手都在、都能拖、静止态都看得见', () => {
   for (const selector of ['.smb-panehandle', '.smb-measurehandle']) {
     assert.ok(hasDecl(selector, 'cursor', /col-resize/), `${selector} 没有 col-resize`);
   }
-  // 静止态可见：抓手那根线必须有底色与尺寸（不是 1px 的通高发丝线——学生报过「没看到」）
-  for (const selector of ['.smb-panehandle > i', '.smb-measurehandle > i']) {
+  // 静止态可见：看得见的是「抓手那一段」，不是通高热区。栏那一段就是 > i 自己；
+  // 正文列那条改成「通高细线（> i，那是**边**）+ 一段短抓手（> i::after，那是**这里能拖**）」，
+  // 所以正文列取的是 ::after。两族各取自己那一段来判底色与尺寸。
+  for (const selector of ['.smb-panehandle > i', '.smb-measurehandle > i::after']) {
     assert.ok(hasDecl(selector, 'background', /var\(--smb-line-strong\)/), `${selector} 静止态没有底色`);
     const heights = declsOf(selector).map((one) => one.get('height')).filter(Boolean);
     assert.ok(heights.some((one) => /^([\d.]+)px$/.test(one) && Number(one.replace('px', '')) >= 32),
       `${selector} 静止态太短（要 ≥32px 才看得见）：${heights.join('/')}`);
   }
+});
+
+test('正文列左右两条边各一个抓手，且都不许探出正文列一格', () => {
+  // 学生 2026-11-15：「我是让你看中间那正文！！左右两条竖线能不能拖动」——两条边都得有抓手。
+  for (const side of ['left', 'right']) {
+    const selector = '.smb-measurehandle[data-side="' + side + '"]';
+    assert.ok(declsOf(selector).length > 0, `${selector} 一条规则都没有——那一条边没有抓手`);
+    assert.ok(hasDecl(selector, side, /^0$/), `${selector} 要贴在自己那条边上（${side}: 0）`);
+  }
+  // 负偏移 = 探出 .smb-doc 之外。.smb-center__body 是 overflow-y: auto，横向按规范会跟着
+  // 算成 auto，探出去一格就能筛出一根横向滚动条（#89 验收条目治的正是这个）。
+  const bad = [];
+  for (const rule of RULES) {
+    if (!rule.selector.startsWith('.smb-measurehandle')) continue;
+    for (const prop of ['left', 'right']) {
+      const value = decl(rule, prop);
+      if (value && /^-/.test(value)) bad.push(`${rule.selector} → ${prop}: ${value}`);
+    }
+  }
+  assert.deepEqual(bad, [], `正文列抓手不许探出正文列：\n  ${bad.join('\n  ')}`);
+});
+
+test('左栏四个面板竖着排（横排会把右边那几项的名字压窄）', () => {
+  // 学生 2026-11-15：「节点 术语 目录 科目 变为一竖列」——横排那一条他先前就否过。
+  assert.ok(hasDecl('.smb-left__tabs', 'flex-direction', /^column$/), '.smb-left__tabs 不是竖排');
+  assert.ok(hasDecl('.smb-left__tabs .smb-rtab', 'width', /100%/), '竖排的每一项要占满整栏宽');
+  assert.ok(hasDecl('.smb-left__tabs .smb-rtab', 'border-bottom', /^0$/), '竖排里那条下划线标记要关掉');
+  assert.ok(hasDecl('.smb-left__tabs .smb-rtab[aria-current="true"]', 'border-left-color', /var\(--smb-brand\)/),
+    '竖排的选中态要有一条左侧竖标');
 });
 
 /* ── §十 A：三处滚动区的标题吸顶 ────────────────────────────────────────── */
