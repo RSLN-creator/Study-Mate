@@ -48,11 +48,47 @@ test('五个部分的名字与配分逐字一致（配分是量具的一部分�
   }
 });
 
-test('两条判定线都在：总分 75 且迁移 9 才是通过；60–75 是「部分通过」', () => {
+test('判定带之间的距离与半宽对得上，或者判分键明说「单次施测分辨不出」', async () => {
+  // 这一条是**算出来的**，不是抄的。第一版判分键写「半宽约 ±8 分」、线与线隔 15 分——
+  // 实算半宽 14–19 分，两条线落在同一个半宽里，一次施测根本分不开。
+  //
+  // 判据有两条出路，**必须走其中一条**：
+  //   ① 带与带之间隔开 2×半宽（带子不重叠）；
+  //   ② 隔不开时，判分键必须**明说**「单次施测分辨不出三条带」，并给出改用的读法
+  //      （同一份卷子隔一段时间重做、看是否落在同一带；剖面比总分稳）。
+  // 2026-11-15 这一版走的是②：总分只有 100、20 个计分点的半宽 14–19 分，
+  // 要把三条带分到不重叠需要隔 30 分以上，做不到。硬撑成"能分辨"才是真的错。
+  const { bootstrapTotal, pointsOf } = await import('../tools/closed-book-bootstrap.mjs');
+  const widest = Math.max(...[
+    { full: 14, half: 4, zero: 2 },
+    { full: 10, half: 5, zero: 5 },
+    { full: 6, half: 4, zero: 10 },
+  ].map((spec) => bootstrapTotal(pointsOf(spec)).半宽));
+  assert.ok(widest >= 13, `20 个计分点的半宽实算是 ${widest}，不该小于 13`);
+
   const key = read('判分键.md');
-  assert.match(key, /总分 ≥ 75/);
-  assert.match(key, /第四部分 ≥ 9|迁移 ≥9|迁移不足 9/);
-  assert.match(key, /部分通过/, '「记住了但不会用」这个中间态必须报出来，不能合并进通过或不通过');
+  // 判分键那里的分数带 Markdown 粗体（`总分 **≥ 90**`），所以不按符号解析，
+  // 只取「判定线」那一块里出现的全部两位数，去重排序，相邻两个就是两条带的边界。
+  const block = key.slice(key.indexOf('**判定线**'), key.indexOf('**为什么'));
+  assert.ok(block.length > 40, '判分键里要有一块「判定线」');
+  const thresholds = [...new Set([...block.matchAll(/(\d{2})(?=\s*[%分\*，。）]|\s*–)/g)].map((m) => Number(m[1])))]
+    .filter((n) => n >= 30 && n <= 100)
+    .sort((a, b) => a - b);
+  assert.ok(thresholds.length >= 2, `判定线那一块里要认出至少两个阈值，实际认出 ${JSON.stringify(thresholds)}`);
+  const gap = thresholds[1] - thresholds[0];
+  assert.ok(gap > 2 * widest || /单次施测分辨不出/.test(key),
+    `两条判定带相距 ${gap} 分（阈值 ${JSON.stringify(thresholds)}），而半宽是 ${widest}：` +
+    '要么把带子隔开 2×半宽，要么在判分键里明说「单次施测分辨不出」并给出改用的读法');
+  assert.match(key, new RegExp(`半宽 ${Math.floor(widest)}–${Math.ceil(widest)} 分|半宽 14–19 分`),
+    '判分键里写出来的半宽要与脚本算出来的量级一致');
+});
+
+test('三条局限都在：一次性施测、实算半宽、可能漏掉有价值的部分', () => {
+  const key = read('判分键.md');
+  assert.match(key, /一次性施测/, '分不出「这次没想起来」与「本来就没学会」');
+  assert.doesNotMatch(key, /±8 分/, '±8 分是拍出来的数，实算是 14–19 分，不许再写回去');
+  assert.match(key, /14–19 分/, '半宽要写实测值');
+  assert.match(key, /可能漏掉/, '卷子按课件出，可能漏掉课里有价值但没出题的部分');
 });
 
 test('计分总则里写了「只看产物、不看自评」与「±2% 算命中」', () => {
@@ -62,12 +98,6 @@ test('计分总则里写了「只看产物、不看自评」与「±2% 算命中
   assert.match(key, /±2%/, '数值容差要写死，否则不同批次不可比');
 });
 
-test('三条局限都在：一次性施测、±8 分半宽、可能漏掉有价值的部分', () => {
-  const key = read('判分键.md');
-  assert.match(key, /一次性施测/, '分不出「这次没想起来」与「本来就没学会」');
-  assert.match(key, /±8 分/, '分数区间半宽要报出来');
-  assert.match(key, /可能漏掉/, '卷子按课件出，可能漏掉课里有价值但没出题的部分');
-});
 
 test('README 写清三条硬规矩与「模型不代答」', () => {
   const readme = read('README.md');
