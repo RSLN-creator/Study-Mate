@@ -477,7 +477,13 @@ const groups = {
       // 宽度是 O(1/√n)——重叠会缩小但不归零。实测 18 点重叠 0.277、60 点 0.183、400 点 0.071。
       // 所以「S1 ≥ 0.8」在任何要点数下都不是可判的判决；判分键里那张表由这条套件现算比对。
       // 第一版把作答参数传成 `{}`，区间全是 [0,0]，整张表成了「全都可判」的假象。
-      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
+      // **引文必须能追到原话**（`test_citation_provenance.mjs`）：规范里引的每个「作者 年份」都要在
+      // `docs/取证/` 里有出处，已读的要带原话，未核的进「尚未核过」那张表。
+      // 2026-11-15 第一次跑它就红了——结论索引引了 Karpicke / Roediger，而取证目录里
+      // 只有讲法四份、一条学习科学文献都没有。**前十七轮的文献支撑，在仓库内是断的。**
+      // 自己核原文时还抓出一处真错：卷子把 Cepeda 2008 在 35 天保持期上的最优间隔写成 7 与 30，
+      // 原文是 11 天。
+      'scripts/tests/test_citation_provenance.mjs',      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',
