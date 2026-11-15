@@ -439,6 +439,10 @@ const groups = {
       // 且还没做过计算、类比没有断点声明。工具在 `scripts/tools/lesson-style-check.mjs`，
       // 出的是**非阻断提醒**（与学生看到的课件质量线同级），这条套件只钉「它报得对不对」。
       'scripts/tests/test_lesson_style.mjs',
+      // 闭卷卷子与判分键的骨架（`templates/closed-book/`）：五个部分的名字与配分、两条判定线、
+      // 「只看产物不看自评」、三条局限、以及「模型不代答」。钉的是**结构不是措辞**——这些改了
+      // 就等于换了一把尺子，两次的分数不可比。用法在 `layered-practice` §八。
+      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',

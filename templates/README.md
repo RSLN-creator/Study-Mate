@@ -12,6 +12,7 @@
 | `RESOURCES.md` | 新建一门科目／「资料收集」交回清单后 | `.learning/subjects/<slug>/RESOURCES.md` |
 | `GLOSSARY.md` | 新建一门科目（先写 `## 待掌握`） | `.learning/subjects/<slug>/GLOSSARY.md` |
 | `lab/`（目录树） | **出题角色**造 lab 时（`kind: 实操`／`kind: 实验`），照抄后只填题目与断言 | `.learning/subjects/<slug>/lab/` |
+| `closed-book/`（两份） | **出题角色**在学生要做闭卷检验时（他说「考考我」，或一个节点读完想验一遍） | `.learning/subjects/<slug>/assessments/<NNNN>-<节点id>-卷子.md` 与 `-判分键.md` |
 
 - `lab/` 是**整棵目录树**的骨架（任务目录、答案目录、lab 说明、判分入口 `check.sh`、
   断言、作答与探针，以及干净态／作答态两个运行入口 `干净态.sh`／`作答态.sh` 与自检 `自检.sh`），
