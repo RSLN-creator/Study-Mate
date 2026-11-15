@@ -189,6 +189,18 @@ test('窄档（@media）的覆盖写在被覆盖的基础规则之后', () => {
     `这些窄档声明写在基础规则之前，同特异度下后者赢——它们是死声明：\n  ${dead.join('\n  ')}`);
 });
 
+test('CSS 体内没有反引号、也没有 ${（否则模板字面量当场被截断）', () => {
+  // 这条是给人看的护栏：`lib/client.js` 里那段 CSS 住在一个模板字面量里，注释里写一个反引号
+  // 就会把它提前收尾，症状是 node --check 报一句离现场很远的「Unexpected identifier」。
+  // 2026-11-15 一天里踩了三次，所以断在这里，而不是靠人记住 fixtures/client-css.mjs 的那句注释。
+  const bad = [];
+  CSS.split('\n').forEach((line, index) => {
+    if (line.includes('`')) bad.push(`第 ${index + 1} 行有反引号：${line.trim().slice(0, 70)}`);
+    if (line.includes('${')) bad.push(`第 ${index + 1} 行有 \${：${line.trim().slice(0, 70)}`);
+  });
+  assert.deepEqual(bad, [], `CSS 体里不许出现反引号与 \${（用「」引术语，别用反引号）：\n  ${bad.join('\n  ')}`);
+});
+
 test('面包屑的宽度上限按全角字算（em），不按 ch', () => {
   // `.smb-crumb` 的 max-width 有两条：基础一条 + 窄档（@media）覆盖一条——#98 已经把中栏那份
   // 遗留规则删了（原来「中栏那一处 + 顶部那一处」的说法不再成立）。所以这里不认「第几条」，
