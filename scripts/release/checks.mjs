@@ -483,7 +483,12 @@ const groups = {
       // 只有讲法四份、一条学习科学文献都没有。**前十七轮的文献支撑，在仓库内是断的。**
       // 自己核原文时还抓出一处真错：卷子把 Cepeda 2008 在 35 天保持期上的最优间隔写成 7 与 30，
       // 原文是 11 天。
-      'scripts/tests/test_citation_provenance.mjs',      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
+      // **待定的拍不许悄悄进规范**（`test_pending_beats.mjs`）：设计文档的节拍表有六拍，
+      // 但只有 B0/B2/B3/B8 落进了 `layered-practice`。查清原因后这个状态是对的——B5（交错）
+      // 与 B6（延迟反馈）的证据互相打架、且都没自己核过原文，所以没落。
+      // 这条套件守住：待定的必须标「证据打架」、已落的四拍必须在规范里、
+      // 待定的不许被写成可执行规则。
+      'scripts/tests/test_pending_beats.mjs',      'scripts/tests/test_citation_provenance.mjs',      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',
