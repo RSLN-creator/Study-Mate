@@ -99,3 +99,24 @@ test('「未核」的引文必须被明确标成未核，不许混进已核里',
       `「${block.split('\n')[0].slice(0, 30)}」标了已读，但没有留原话`);
   }
 });
+
+test('「不做某件事」的反证必须写全——只引反例不引正例就是歪曲', () => {
+  // 2026-11-15 核原文抓出来的：我们引 Brunmair & Richter 只引「说明性文本不显著、词表 −0.39」，
+  // 从来不引它那句「总体 g = 0.42」——**交错练习整体上是有效的**，只是对我们的材料不显著。
+  // 只引反例，读的人会以为「交错无效」，而那是错的。
+  const index = fs.readFileSync(path.join(ROOT, 'docs/设计/学习方法层-结论索引.md'), 'utf8');
+  if (!index.includes('Brunmair')) return;
+  assert.match(index, /g\s*=\s*0\.42|总体 g=0\.42/,
+    '引 Brunmair & Richter 时必须写出「总体 g=0.42」——不写就成了「交错无效」，那是歪曲');
+  assert.match(index, /不显著/, '同时要写清「说明性文本不显著」这半句，否则又倒向另一头');
+});
+
+test('Leroy 那条不许只引反证——同一篇里「连贯性增强 p=.003 有效」是我们的正面证据', () => {
+  // 我们拿 Leroy 2013 去反对「用可读性公式当验收」，只引了 Cloze 变差（p=.004）。
+  // 但同一篇里「连贯性增强对选择题有显著好处（p=.003）」——而连贯性增强**正是我们方向一的
+  // 判据（补连贯空缺）**。只引反证不引正证，等于把支持自己的证据藏起来。
+  const evidence = fs.readFileSync(path.join(ROOT, 'docs/取证/学习方法-文献.md'), 'utf8');
+  if (!evidence.includes('Leroy')) return;
+  assert.match(evidence, /p\s*=\s*\.003|p=.003/, 'Leroy 2013 里连贯性增强 p=.003 有效，这条要写出来');
+  assert.match(evidence, /连贯性增强/, '要说明「连贯性增强」正是我们方向一的判据');
+});
