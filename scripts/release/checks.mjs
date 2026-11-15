@@ -501,7 +501,11 @@ const groups = {
       // 一张表，而不是自己从头画——画表没有判断成分，纯粹体力活，而体力活正是让人放弃的地方。
       // 这条套件钉住最关键的一点：**生成的表能被 `recite-from-table` 读回去**。
       // 第一版接不上（一个生成勾选框、一个只读第 2 格），填好的表喂进去一条都解析不出。
-      'scripts/tests/test_recite_sheet.mjs',      'scripts/tests/test_recite_from_table.mjs',      'scripts/tests/test_inspection_record.mjs',      'scripts/tests/test_pending_beats.mjs',      'scripts/tests/test_citation_provenance.mjs',      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
+      // **端到端演练**（`test_recite_pipeline_e2e.mjs`）：卡 → 表 → 填 → 算 → 报分单，
+      // 整条链真跑一遍。第二十四轮发现了「单件全绿、串起来全错」，这条套件就是防它复发。
+      // 它抓到的三件事都是单件测试看不见的：闸门落在区间内时工具照样印「不通过」、
+      // 区间算法把「部分」密化成整数条、报分单没说「做背默卡就删掉卷子那节」。
+      'scripts/tests/test_recite_pipeline_e2e.mjs',      'scripts/tests/test_recite_sheet.mjs',      'scripts/tests/test_recite_from_table.mjs',      'scripts/tests/test_inspection_record.mjs',      'scripts/tests/test_pending_beats.mjs',      'scripts/tests/test_citation_provenance.mjs',      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',

@@ -152,9 +152,20 @@ function main() {
   // 未判的当「未中」算 S1 是错的；但也不能不算。这里的口径：**按已判的算，并报出未判条数**。
   const answered = table.命中.length + table.部分.length + table.未中.length;
   const s1 = (table.命中.length + 0.5 * table.部分.length) / total;
+  // **区间要用真实判定算，不能拿 s1 反推一组合成命中**。
+  // 反推会把 12 命中 + 3 部分密化成 13/18，丢掉"部分"的成分，区间就跟着失真。
+  // 这里把 s1 还原成"若干个 1 与若干个 0.5"：先放命中的 1，再放部分分。
+  const values = [
+    ...Array.from({ length: table.命中.length }, () => 1),
+    ...Array.from({ length: table.部分.length }, () => 0.5),
+    ...Array.from({ length: Math.max(0, total - answered) }, () => 0),
+    ...Array.from({ length: Math.max(0, total - answered - table.未中.length) }, () => 0),
+  ].slice(0, total);
+  while (values.length < total) values.push(0);
   const band = bootstrapS1(
-    { 要点: Array.from({ length: total }, (_, i) => ({ id: `P${i + 1}` })) },
-    { 命中: Array.from({ length: Math.round(s1 * total) }, (_, i) => `P${i + 1}`) },
+    { 要点: values.map((_, i) => ({ id: `P${i + 1}` })) },
+    { 命中: values.map((v, i) => (v === 1 ? `P${i + 1}` : '__none__' + i)),
+      部分: values.map((v, i) => (v === 0.5 ? `P${i + 1}` : '__none__' + i)) },
     4000,
   );
 
@@ -176,6 +187,16 @@ function main() {
       '这不是"未中"，是"没判"。要么补判，要么在报分单里写明。';
   }
 
+  // **闸门落在 S1 的区间里 → 这一次判不出“过/不过”。**
+  // 端到端演练时撞到的：S1 = 0.75、区间 [0.556, 0.944]，闸门 0.8 就落在区间内，
+  // 而工具照样印「不通过」。那个「不通过」比不说话更糟——它看起来像个判决。
+  if (band.下界 <= 0.8 && 0.8 <= band.上界) {
+    result.闸门落在区间内 = true;
+    result.判定说明 = `S1 = ${result.S1}，区间 [${band.下界}, ${band.上界}] 把闸门 0.8 包在里面——`
+      + '这一次判不出「过/不过」。报分时写「S1 = ... （区间 ...），闸门落在区间内，判不出」，'
+      + '不要写「不通过」。';
+  }
+
   if (s2 !== null && probe !== null) {
     result.判定 = scoreRecite(
       { 要点: Array.from({ length: total }, (_, i) => ({ id: `P${i + 1}`, 类型: '骨架', 要点: '' })) },
@@ -189,7 +210,12 @@ function main() {
     console.log(`要点 ${total} 条，已判 ${answered} 条：命中 ${table.命中.length}、部分 ${table.部分.length}、未中 ${table.未中.length}`);
     if (missing.length) console.log(`⚠️ 未判 ${missing.length} 条：${missing.join('、')}`);
     console.log(`S1 = ${result.S1}　95% 区间 ${result.S1区间}`);
-    if (result.判定) console.log(`S2 = ${s2}　探针 = ${probe}　→ ${result.判定}`);
+    // 闸门落在区间内时，**不印「不通过」**——那个词会被当成判决。
+    if (result.闸门落在区间内) {
+      console.log(`⚠️ 闸门 0.8 落在区间 [${band.下界}, ${band.上界}] 内 —— 这一次判不出「过/不过」。`);
+    } else if (result.判定) {
+      console.log(`S2 = ${s2}　探针 = ${probe}　→ ${result.判定}`);
+    }
     console.log('\n报分单上就这么写：');
     console.log(`  S1 命题召回 = ${result.S1}（95% 区间 ${band.下界}–${band.上界}）`);
     if (s2 !== null) console.log(`  S2 结构档 = ${s2}／3　　迁移探针 = ${probe}`);
