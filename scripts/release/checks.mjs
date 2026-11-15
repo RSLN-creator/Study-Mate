@@ -497,7 +497,11 @@ const groups = {
       // 放弃的地方。这个工具直接吃那张表。
       // 它自己踩过三个坑，全在写的时候一次犯完：`|` 开头被当跳过、只按制表符切（`P1 命中`
       // 全丢，8 行表解析出 1 条）、`--s2 2` 里的 2 被当成文件名。**三个坑都不报错，只是算错。**
-      'scripts/tests/test_recite_from_table.mjs',      'scripts/tests/test_inspection_record.mjs',      'scripts/tests/test_pending_beats.mjs',      'scripts/tests/test_citation_provenance.mjs',      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
+      // **从要点表生成空白判分表**（`recite-sheet.mjs`）：判 18 条要点时，判分者手上应该已经有
+      // 一张表，而不是自己从头画——画表没有判断成分，纯粹体力活，而体力活正是让人放弃的地方。
+      // 这条套件钉住最关键的一点：**生成的表能被 `recite-from-table` 读回去**。
+      // 第一版接不上（一个生成勾选框、一个只读第 2 格），填好的表喂进去一条都解析不出。
+      'scripts/tests/test_recite_sheet.mjs',      'scripts/tests/test_recite_from_table.mjs',      'scripts/tests/test_inspection_record.mjs',      'scripts/tests/test_pending_beats.mjs',      'scripts/tests/test_citation_provenance.mjs',      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',

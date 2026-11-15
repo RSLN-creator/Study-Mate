@@ -44,11 +44,29 @@ export function parseLine(line) {
   // 一份 8 行的判定表只解析出 1 条。
   // 三种写法都要认：P1 命中（空格分隔）、P1\t命中（制表符）、`| P1 | 命中 |`（表格）。
   // **第一版只按 | 与制表符切**，于是最常见的 `P1 命中` 被丢掉了——8 行表只解析出 1 条。
-  const cells = raw.split(/[|\t\s]+/).map((c) => c.trim()).filter(Boolean);
-  if (cells.length < 2) return null;
+  const cells = raw.split(/[|\t]+/).map((c) => c.trim()).filter(Boolean);
+  if (cells.length < 2) {
+    // 也认空白分隔的简写：`P1 命中`
+    const bare = raw.split(/\s+/).filter(Boolean);
+    if (bare.length >= 2 && /^P\d+$/i.test(bare[0])) return verdictOf(bare[0], bare[1]);
+    return null;
+  }
   const id = cells[0];
   if (!/^P\d+$/i.test(id)) return null;
+  // **`recite-sheet` 生成的表是勾选框形式**（`| P1 | 骨架 | 要点 | [×] | [ ] | [ ] |`），
+  // 判定在第 4–6 格而不是第 2 格。两个工具必须接得上，否则"填完表"等于白填。
+  // 第一版只读第 2 格，于是填好的表喂进来一条判定都解析不出。
+  const boxed = cells.slice(3, 6).map((c) => /\[\s*[×xX✓]\s*\]/.test(c) ? '1' : '0');
+  if (boxed.some((b) => b === '1')) {
+    const picked = ['命中', '部分', '未中'][boxed.indexOf('1')];
+    return verdictOf(id, picked);
+  }
   const verdict = cells[1];
+  return verdictOf(id, verdict);
+}
+
+/** 判定词 → { id, 档, 值 }。同义写法都认。 */
+function verdictOf(id, verdict) {
   for (const [pattern, value, label] of CORE) {
     if (pattern.test(verdict)) return { id: id.toUpperCase(), 档: label, 值: value };
   }
@@ -104,10 +122,27 @@ function main() {
   const probe = args.includes('--probe') ? Number(args[args.indexOf('--probe') + 1]) : null;
 
   const table = parseTable(text);
-  const missing = missingVerdicts(rubric, table);
+  // 没勾的行也算「未判」——从表里出现过的 P 编号里减去已判的。
+  const judgedIds = new Set([...table.命中, ...table.部分, ...table.未中]);
+  const seenIdsAll = new Set();
+  for (const line of text.split('\n')) {
+    const m = line.match(/(?:^|[|\s])(P\d+)(?:[|\s]|$)/i);
+    if (m) seenIdsAll.add(m[1].toUpperCase());
+  }
+  const unmarked = [...seenIdsAll].filter((id) => !judgedIds.has(id));
+  const missing = rubric ? missingVerdicts(rubric, table) : unmarked;
 
   // 要点总数：优先用要点表，否则用判定过的条数
-  const total = rubric ? rubric.要点.length : table.命中.length + table.部分.length + table.未中.length;
+  // **分母不能是「判过的条数」**——这一条栽过：`recite-sheet` 生成的表有 18 行，我模拟只勾了
+  // 2 行，分母取 2 于是 S1 = 0.75；而真实 S1 是 (1+0.5)/18 = 0.083。**虚高九倍，且从输出
+  // 上看不出来。** 分母必须是**要点总数**：有要点表就用它，没有就用"表里出现过的 P 编号条数"
+  // （包括没勾的——那说明判分者画了这张表却没填）。
+  const seenIds = new Set();
+  for (const line of text.split('\n')) {
+    const m = line.match(/(?:^|[|\s])(P\d+)(?:[|\s]|$)/i);
+    if (m) seenIds.add(m[1].toUpperCase());
+  }
+  const total = rubric ? rubric.要点.length : Math.max(seenIds.size, table.命中.length + table.部分.length + table.未中.length);
   if (total === 0) {
     console.error('一条判定都没解析出来——检查一下判定词的写法（命中/部分/未中）。');
     process.exitCode = 1;
