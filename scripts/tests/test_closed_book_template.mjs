@@ -107,6 +107,22 @@ test('README 写清三条硬规矩与「模型不代答」', () => {
   assert.match(readme, /模型不代答/, '被试必须是人——这条没有例外');
 });
 
+test('节拍表在卷子里，且明说「不是复习排期」', () => {
+  // 检索练习那一方向的落地只有一处：卷子里这三个时点。它们必须同时满足两件事——
+  //   · 时点与证据对得上（+1 天是硬的，Cepeda 2006/2008；+7/+30 是外推）；
+  //   · 明说「不是复习排期」——仓库把「间隔重复、复习队列、任何待复习汇总」列在非目标里。
+  // 判据同时盯这两头：缺时点 = 那一方向没落地；缺「不是排期」那句 = 越界。
+  const paper = read('卷子.md');
+  assert.match(paper, /\+1 天/, '最短那个时点是最硬的一条证据，不能省');
+  assert.match(paper, /\+7 天/);
+  assert.match(paper, /\+30 天/);
+  assert.match(paper, /答对了也别停/, '「答对就出队」是最容易犯的错（Karpicke & Roediger 2008：35% vs 80%）');
+  assert.match(paper, /别在同一天连做几遍/, '同一天集中重复 ≈ 没重复');
+  assert.match(paper, /不是复习排期/, '必须与「不做复习队列」那条非目标划清');
+  assert.match(paper, /系统里没有"到期"记录|系统里没有「到期」记录|没有"到期"记录/,
+    '要说清系统不做排期器——否则读的人会以为有东西在跟踪');
+  assert.match(paper, /目标态规格/, '越界与否的判据挂在哪份文档上，要写出来');
+});
 test('lab 骨架没被这一份影响（两套骨架互不污染）', () => {
   const lab = path.join(ROOT, 'templates', 'lab');
   assert.ok(fs.existsSync(path.join(lab, '0000-示例', 'check.sh')), 'lab 骨架的判分入口还在');
