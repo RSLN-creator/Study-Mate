@@ -63,6 +63,21 @@ test('宽度偏好落本地：正文档与栏宽各有一个键', () => {
   assert.ok(/setProperty\('--smb-measure'/.test(hook), 'useMeasureWidth 没有把值写到 --smb-measure 上');
 });
 
+test('测宽抓手住在正文列**里面**（定位基准是 .smb-doc 自己，不靠算）', () => {
+  // 上一版把它挂在滚动区上，位置用 right: max(0px, calc((100% - min(100%, var(--smb-measure))) / 2 - 4px))
+  // 算出来——calc 里嵌 min、百分比与 em 混算，学生报「完全拖动不了」。能靠 DOM 关系表达的不要靠算。
+  const docAt = SOURCE.indexOf("h('article.smb-doc', null,");
+  const handleAt = SOURCE.indexOf('h(MeasureHandle, { measure })');
+  assert.ok(docAt >= 0, 'lib/client.js 里找不到 article.smb-doc 的渲染');
+  assert.ok(handleAt > docAt, '抓手要渲染在 article.smb-doc **里面**（在外层就失去定位基准，只能靠算）');
+  // 而且不许再用「画布宽减列宽折半」那种算法（那是上一版坏掉的原因）。
+  // ⚠ 判之前必须**剔掉注释**：注释里正写着那串被废弃的算法当反例，不剔就会匹配到自己
+  // （同一条套件在 `.smb-subhead__stats` 的 max-width 上也踩过一次这种误伤）。
+  const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.ok(!/right:\s*max\(0px,\s*calc\(/.test(CODE),
+    '不该再用 max(0px, calc(...)) 去算抓手的位置——它在滚动容器上没能落到位');
+});
+
 test('居中列拖 d 只挪 d/2，所以测宽必须加 2d（否则跟不住手）', () => {
   const measure = bodyOf('MeasureHandle');
   assert.ok(/2\s*\*\s*\(pendingX\s*-\s*origin\.current\.x\)/.test(measure),

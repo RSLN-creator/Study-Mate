@@ -138,6 +138,18 @@ test('正文列的测宽引 --smb-measure（写死 px 就是「拖了等于没�
   assert.ok(values.length > 0, '.smb-doc 没有 max-width');
   const bad = values.filter((one) => !/var\(--smb-measure/.test(one));
   assert.deepEqual(bad, [], `正文列的测宽上限必须引 --smb-measure：${bad.join('、')}`);
+  // 抓手住在正文列**里面**，所以正文列自己必须是一个定位基准——没有它抓手就落到滚动区上，
+  // 位置只能靠 calc 去算（上一版就是这么坏的：学生报「完全拖动不了」）
+  assert.ok(hasDecl('.smb-doc', 'position', /relative/), '.smb-doc 没有 position: relative（抓手没有定位基准）');
+});
+
+test('进度条占满整列：不许再有自加的测宽上限', () => {
+  // 学生按截图报「这个横线你还是没有等宽」——根因是 .smb-subhead__stats 上有个 max-width: 520px。
+  // 与简介那条（.smb-subhead__goal 的 68ch）是同一个毛病：没有任何要求要等宽，上限都是自己加的。
+  const caps = declsOf('.smb-subhead__stats').map((one) => one.get('max-width')).filter(Boolean);
+  assert.deepEqual(caps, [], `.smb-subhead__stats 不许写 max-width（进度条会只画到一半）：${caps.join('、')}`);
+  const goalCaps = declsOf('.smb-subhead__goal').map((one) => one.get('max-width')).filter(Boolean);
+  assert.deepEqual(goalCaps, [], `.smb-subhead__goal 不许写 max-width：${goalCaps.join('、')}`);
 });
 
 test('两条抓手都在、都能拖、静止态都看得见', () => {
