@@ -442,7 +442,12 @@ const groups = {
       // 闭卷卷子与判分键的骨架（`templates/closed-book/`）：五个部分的名字与配分、两条判定线、
       // 「只看产物不看自评」、三条局限、以及「模型不代答」。钉的是**结构不是措辞**——这些改了
       // 就等于换了一把尺子，两次的分数不可比。用法在 `layered-practice` §八。
-      'scripts/tests/test_closed_book_template.mjs',
+      // 正文可理解性的七个指标（`scripts/tools/lesson-readability.mjs`）：连贯空缺率、拟物动词、
+      // 定语嵌套、就近整合、句长、路标、衔接词。**分数是批内分位，不是绝对分**——实测 23 份课件
+      // 的连贯空缺率全部落在 31–60%，写死绝对阈值等于没分辨力。这条套件只钉「它报得对不对」，
+      // 每条判据都有正例不报、反例必报的一对样例（实测抓到过三处：二元组饱和、名词连缀误报、
+      // 把「决定」当拟物动词）。
+      'scripts/tests/test_lesson_readability.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',
