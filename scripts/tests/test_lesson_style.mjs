@@ -150,6 +150,32 @@ test('类比：数值换算不算类比（「1.8 kN 相当于 180 kg」不是结
   assert.equal(hits(structural, '类比').length, 1, '结构类比要报');
 });
 
+test('并列：一张图也能当总表（不是只有管道表才算）', () => {
+  // 实测踩过的坑：`0016-stability` 的「三条通道一张表」用的是 `::: svg` 三行链条图，
+  // 每一行一条通道，节内再逐条展开差异——那正是「节首给一张总表」，只是载体是图。
+  const withFigure = '## 三条通道一张表\n\n::: svg\nalt: 三行链条图\ncaption: 三条通道各有一个驱动量\n\n<svg viewBox="0 0 10 10"></svg>\n:::\n\n逐条展开。\n';
+  assert.equal(hits(withFigure, '并列').length, 0, '图承担了总表');
+});
+
+test('符号：全部当场带单位的，不算堆砌', () => {
+  // 实测踩过的坑：`0012-exp-1` 的「三栏各装什么」一段里 R 跟 A/W、EQE 跟 %、D* 跟 Jones——
+  // 每个符号当场交代了单位，等于逐个交代过口径，该算合规。
+  const withUnits = [
+    '## 甲', '',
+    '- 响应度 $R$ 的单位是 A/W，定义为 $R=(I_{\\text{light}}-I_{\\text{dark}})/(P_{\\text{in}}A)$。',
+    '- 外量子效率 $EQE=R\\cdot\\frac{1240}{\\lambda}\\times100\\%$，$\\lambda$ 取 nm。',
+    '- 比探测率 $D^{\\ast}=R\\sqrt{A}/\\sqrt{2qI_{\\text{dark}}}$，单位 Jones。', '',
+  ].join('\n');
+  assert.equal(hits(withUnits, '符号').length, 0, '每个符号都带单位');
+});
+
+test('符号：代码常量名不算数学符号', () => {
+  // 实测踩过的坑：`0002-face-px-threshold` 列出学生脚本的七个输入常量
+  // （f_mm、FACE_W、PIXEL_UM…），被判成「进了六个符号」。常量写在代码里，不需要交代口径。
+  const constants = '## 甲\n\n脚本的输入有 `f_mm`、`w_mm`、`D_m`、`FACE_W`、`PIXEL_UM` 五个。\n';
+  assert.equal(hits(constants, '符号').length, 0);
+});
+
 test('固定收尾（原文在哪儿 / 三句要能说出来）不进体检', () => {
   const markdown = '## 甲\n\n内容。\n\n## 原文在哪儿\n\n| 序号 | 名称 |\n| --- | --- |\n\n## 三句要能说出来\n\n- 一句话。\n';
   assert.equal(inspect(markdown).length, 0);

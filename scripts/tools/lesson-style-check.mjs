@@ -43,6 +43,8 @@ export function sections(markdown) {
         subsections,
         // 首段里那张总表有几行（表头与分隔行不算）
         leadTableRows: leadingTableRows(section.lines),
+        // 节首（前 30 行内）有没有一张 `::: svg` / `::: figure`：图也能承担总表
+        leadFigure: section.lines.slice(0, 30).some((line) => /^::: *(svg|figure)\b/.test(line)),
         chars: countProseChars(body),
         paragraphs: body.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean),
       };
@@ -169,6 +171,10 @@ function checkEnumeration(section) {
   if (!ENUMERATION_HEADING.test(section.title)) return null;
   if (section.subsections >= 3) return null;
   if (section.leadTableRows >= 3) return null;
+  // **一张把每个对象收住的图也算总表**：`0016-stability` 的「三条通道一张表」用的是一张
+  // 三行链条图（每行一条通道：驱动量 → 中间过程 → 现象），节内再逐条展开差异。
+  // 那正是规范要的写法，只是载体是 `::: svg` 而不是管道表。
+  if (section.leadFigure) return null;
   return { 判据: '并列', 级: '提示', 节: section.title,
     说: '标题就是"N 个东西并列"，而节内既没拆成子节、也没有一张把每个对象收住的总表。要么拆成 N 节，要么节首给一张总表、节内每个对象只写"与总表不同的那一点"。' };
 }
@@ -183,8 +189,12 @@ function checkEnumeration(section) {
  *     `L_{\text{d}}` 是一个符号（扩散长度）。第一版按 `[A-Za-z]+` 逐个抽词，把
  *     `k_{\text{B}}T` 数成了 k、B、T 三个，一段的符号数虚增近一倍——真该报的节
  *     反而因为"数太大"显得不可信。所以先把 `_{…}` 整块摘掉再抽。 */
-const LATEX_COMMAND = /^\\(?:frac|cdot|arctan|tan|sqrt|mathrm|text|times|div|approx|le|ge|neq|left|right|qquad|quad|Delta|mu|varepsilon|theta|omega|lambda|pi|tau)$/;
+const LATEX_COMMAND = /^\\(?:frac|cdot|arctan|tan|sqrt|mathrm|text|times|div|approx|le|ge|neq|left|right|qquad|quad|Delta|mu|varepsilon|theta|omega|lambda|pi|tau|ast|star|circ|pm|mp|sim|simeq|propto|infty|partial|nabla|sum|int|prod|to|rightarrow|Rightarrow|ldots|dots|alpha|beta|gamma|delta|kappa|rho|sigma|phi|chi|psi|eta|nu|xi|zeta|iota|upsilon)$/;
 const SYMBOL_TOKEN = /^[A-Za-z](?:_[A-Za-z0-9]+)?$|^[A-Z]{2,6}(?:_[A-Za-z0-9]+)?$/;
+/* **代码常量名不算数学符号**：`f_mm`、`FACE_W`、`PIXEL_UM`、`REQ_FACE_PX` 是学生脚本里的
+ * 变量，读者不需要"交代口径"，它们就写在代码里。实测踩过：`0002-face-px-threshold` 的
+ * 「改一个输入反推门槛与焦距」因为列了七个输入常量被报"进了六个符号"。判据只抓数学符号。 */
+const CODE_CONSTANT = /^(?:[a-z]+(?:_[a-z0-9]+)+|[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)$/;
 
 /** 把 `_{…}`（可能嵌套）整块去掉，并记下它属于哪个主符号。 */
 function stripSubscripts(text) {
@@ -208,7 +218,9 @@ function stripSubscripts(text) {
 function countSymbols(paragraph) {
   const found = new Set();
   for (const match of paragraph.matchAll(/`([A-Za-z_][\w.]*)`/g)) {
-    if (SYMBOL_TOKEN.test(match[1])) found.add(match[1]);
+    if (!SYMBOL_TOKEN.test(match[1])) continue;
+    if (CODE_CONSTANT.test(match[1])) continue;          // f_mm / FACE_W 是代码变量
+    found.add(match[1]);
   }
   for (const match of paragraph.matchAll(/\$([^$\n]{1,80})\$/g)) {
     const { text } = stripSubscripts(match[1]);
@@ -238,11 +250,25 @@ function checkSymbolFlood(section, alreadySeen = new Set()) {
     const fresh = symbols.filter((symbol) => !seen.has(symbol));
     for (const symbol of symbols) seen.add(symbol);
     if (calculated || fresh.length <= 3) continue;
+    // **每个符号都当场带了单位**（A/W、%、Jones、nm），等于逐个交代过了口径——这也算合规。
+    // `0012-exp-1` 的「三栏各装什么」正是这么写的：R 跟 A/W、EQE 跟 %、D* 跟 Jones。
+    if (fresh.every((symbol) => hasUnitRightAfter(paragraph, symbol))) continue;
     issues.push({ 判据: '符号', 级: '提醒', 节: section.title,
       说: `还没做过一次具体计算，这一段就进了 ${fresh.length} 个首次出现的符号（${fresh.slice(0, 6).join('、')}…）。一次别进太多——先给一个能算出数的例子，或者像「含义 / 单位 / 取值」那样先摆一张表，把符号挂上去。` });
     break;
   }
   return issues;
+}
+
+const UNIT_TOKENS = /(A\/W|mA\/W|Jones|Jones|%|nm|μm|mm|cm|m|s|ms|μs|ns|V|mV|kV|A|mA|nA|μA|W|mW|μW|Hz|kHz|MHz|GHz|K|℃|eV|J|F|Ω|C|px|dB)/;
+
+/** 这个符号在段内出现的位置附近（同一句或紧跟的分句里）有没有单位。 */
+function hasUnitRightAfter(paragraph, symbol) {
+  const at = paragraph.indexOf(symbol);
+  if (at < 0) return false;
+  const window = paragraph.slice(at, at + 120);
+  const sentence = window.split(/[。；]/)[0];
+  return UNIT_TOKENS.test(sentence);
 }
 
 /** 全文档级别的符号出现顺序：第几段第一次见到这个符号。 */
