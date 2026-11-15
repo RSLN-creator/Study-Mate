@@ -33,12 +33,16 @@
  * #107 退役了「面板自己调模型」那条路由，随它一起走掉的码（`ask-failed` / `question-required`
  * / `lesson-not-found` / `model-empty` / `model-error`）也删了：留在表里等于让客户端对着
  * 一个没有任何路由会回的错误分支写代码。
+ *
+ * `mode-invalid` 与 `open-failed` 是 `lib/open-route.ts`（POST /api/studymate/open）那两个码：
+ * 前者是 `mode` 不在 `open` / `reveal` 里，后者是交给系统去开的时候失败了。它们曾经漏登记，
+ * 于是这条词表扫描一直在报它们——**新增一条路由就要连它的码一起登记**，别只在源码里写字符串。
  */
 export const ROUTE_ERROR_CODES = [
   'body-invalid', 'event-invalid', 'evidence-invalid', 'expected-version-required',
   'file-shape-unknown', 'http-error', 'internal', 'lesson-missing', 'markdown-invalid',
-  'method-not-allowed', 'model-unavailable', 'name-conflict',
-  'network', 'no-workspace', 'node-invalid', 'operation-id-conflict', 'operation-id-invalid',
+  'method-not-allowed', 'mode-invalid', 'model-unavailable', 'name-conflict',
+  'network', 'no-workspace', 'node-invalid', 'open-failed', 'operation-id-conflict', 'operation-id-invalid',
   'path-invalid', 'preset-unavailable', 'progress-invalid', 'progress-missing', 'questions-invalid',
   'session-create-failed', 'subject-invalid', 'title-invalid',
   'topic-invalid', 'version-conflict', 'workspace-missing', 'write-failed', 'write-verification-failed',
