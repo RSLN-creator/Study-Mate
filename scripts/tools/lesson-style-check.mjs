@@ -43,6 +43,8 @@ export function sections(markdown) {
         subsections,
         // 首段里那张总表有几行（表头与分隔行不算）
         leadTableRows: leadingTableRows(section.lines),
+        // 节里有没有一段连续三个及以上的有序列表项（`1. ` `2. ` `3. `）：清单也能承担收口
+        leadOrderedItems: orderedRun(section.lines),
         // 节首（前 30 行内）有没有一张 `::: svg` / `::: figure`：图也能承担总表
         leadFigure: section.lines.slice(0, 30).some((line) => /^::: *(svg|figure)\b/.test(line)),
         chars: countProseChars(body),
@@ -51,25 +53,34 @@ export function sections(markdown) {
     });
 }
 
-/** 节的前四段里有没有一张 ≥3 数据行的表。
+/** 节里有没有一张 **≥3 数据行**的表（不管它在第几段）。
  *
- * **不要求表格紧贴节首**：`0001-intro` 的「三条会让采购填错的读法」先一句
- * 「上面这些数能证伪三句流传很广的话」，然后才是那张两列表——一句话引出一张总表，
- * 是完全合规的写法，卡"紧接开头"会把它误判成没给总表。 */
+ * 三版判据的演进，都是被真课件打回来的：
+ *   · 第一版要求表格**紧贴节首** → `0001-intro` 的「三条会让采购填错的读法」先一句
+ *     「上面这些数能证伪三句流传很广的话」，然后才是表，被判成没给总表。
+ *   · 第二版放宽到「前四段」→ `0003` 的「反解焦距的三种等价写法」先讲一条链（四个列表项），
+ *     再引「同一件事有三种等价写法」+ 三行表，落在第五段之后，又被判错。
+ *   · 现在：**不数段落位置**。这一节的着眼点是不是"一件事的 N 种写法"，与表放在第几段
+ *     无关；只要节内有那张收住 N 个对象的表，就算给过了。剩下唯一该管的，是**有没有**。 */
+/** 最长的一段连续有序列表项（`1. ` `2. ` `3. `）有多长。 */
+export function orderedRun(lines) {
+  let best = 0;
+  let run = 0;
+  for (const line of lines) {
+    if (/^\s*\d+\.\s+/.test(line)) run += 1;
+    else if (line.trim() === '') { /* 空行不打断列表 */ }
+    else { best = Math.max(best, run); run = 0; }
+  }
+  return Math.max(best, run);
+}
 function leadingTableRows(lines) {
-  let blank = 0;
   let rows = 0;
   let counting = false;
   for (const line of lines) {
-    if (blank > 4) break;                         // 已经过了前四段
     const isTable = /^\s*\|/.test(line);
     if (isTable) { counting = true; }
     else if (counting) { break; }                 // 这张表结束了
-    else {
-      if (line.trim() === '') { if (!/^\s*$/.test(line)) blank += 1; }
-      if (/^\s*$/.test(line)) blank += 1;
-      continue;
-    }
+    else { continue; }
     if (/^\s*\|[\s:|-]+\|\s*$/.test(line)) continue;   // 分隔行
     rows += 1;
   }
@@ -131,11 +142,33 @@ function checkBackReference(section) {
   if (!first) return null;
   // 只对**显式提问式**起笔要求回收。一句场景描述（"桌上摆着两台机器"）不构成承诺，
   // 不回收不算问题——把场景也纳进来会让这条判据在几乎每一节上都报。
-  if (!/[？?]/.test(first)) return null;
+  //
+  // **提问不一定在第一段**：`stella-box/0001` 的「第三层：设备得自报家门」先一句
+  // 「前面说到，主机收到那几个字节就认定…」，第二段才问「主机凭什么相信？」。
+  // 判据看的是「这一节有没有立一个靶子」，所以取前三段里的第一个问句。
+  // **`:::` 指令块里的问句不算立靶子**：`0002-read-datasheet` 的「这一行影响哪个决定」
+  // 把判据整句放在 `::: note` 里（「这一行如果取另一个值，我的哪个决定会变？」）——
+  // 那是在**给判据**，不是在给这一节立一个待回答的疑问。把它算成提问就会要求回收，
+  // 而判据本来就不需要回收。
+  const prose = section.paragraphs.filter((p) => !/^:::/.test(p));
+  const opener = prose.slice(0, 3).map((p) => (p.match(/^[^。？?]*[？?]/) || [null])[0]).find(Boolean);
+  const question = /[？?]/.test(first) ? first : opener;
+  if (!question) return null;
   // **看全节，不只末段**：`0006-material-abx3` 的「容差因子当判据」在第 2 段就把
   // "t 落在 0.7–1.1" 答了，末段接的是练习说明——只查末段会把它误判成没回收。
-  const rest = section.paragraphs.slice(section.paragraphs.indexOf(first) + 1).join('\n');
+  const from = section.paragraphs.indexOf(question) >= 0 ? section.paragraphs.indexOf(question) : section.paragraphs.indexOf(first);
+  const rest = section.paragraphs.slice(from + 1).join('\n');
   if (BACKREFERENCE.test(rest)) return null;
+  // **起笔那一问在紧跟着的一两段里就被答掉了，也算回收。** `0002-read-datasheet` 的
+  // 「四问：自带什么」是这样写的：「外设清单能不能一次覆盖？」→ 紧接着一张对比表 +
+  // 「数量上的差别一眼可见」。判据原来只找「回到开头」这类字样，遇到「当场就答」的
+  // 写法就误报——而当场答掉恰恰是最好的回收。
+  const near = section.paragraphs.slice(from + 1, from + 3).join('\n');
+  // 紧跟着的两段有实质内容（长、且不是又抛一个新问句），就算当场答了。
+  // 原来只认「有表或有数」，可 `stella-box/0001` 的回答是纯文字的
+  // （「那几个字节的含义就是在这份申报里定下来的」）——文字答复也是答复。
+  const answersBack = near.length > 80 && !/[？?]$/.test(near.trim());
+  if (answersBack) return null;
   // 降级为**提示**：这条判据只看"有没有一句话把视线拉回去"，判不出"答得对不对"，
   // 信号弱，不该和符号、类比那几条同级。
   return { 判据: '回收', 级: '提示', 节: section.title,
@@ -171,6 +204,10 @@ function checkEnumeration(section) {
   if (!ENUMERATION_HEADING.test(section.title)) return null;
   if (section.subsections >= 3) return null;
   if (section.leadTableRows >= 3) return null;
+  // **节首给的是编号清单也算收住**：`0018-exp-3` 的「验收的三条自查」正文就是
+  // 「三条自查：1. … 2. … 3. …」——那已经是一个把三个对象列齐的收口，与总表同效。
+  // 判据要的是「N 个对象有没有被一次列清」，不是「非得用表格」。
+  if (section.leadOrderedItems >= 3) return null;
   // **一张把每个对象收住的图也算总表**：`0016-stability` 的「三条通道一张表」用的是一张
   // 三行链条图（每行一条通道：驱动量 → 中间过程 → 现象），节内再逐条展开差异。
   // 那正是规范要的写法，只是载体是 `::: svg` 而不是管道表。

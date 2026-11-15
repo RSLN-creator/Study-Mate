@@ -176,6 +176,27 @@ test('符号：代码常量名不算数学符号', () => {
   assert.equal(hits(constants, '符号').length, 0);
 });
 
+test('六条判据全部仍能报警（放宽之后不许退化成一堆恒真）', () => {
+  // 这条是「判据的判据」。2026-11 那几轮为了让 23 份真课件的误报归零，一共放宽了七处
+  // （总表的位置、### 拆节、编号清单、图当总表、紧接一段答掉、提问可能在第二段、
+  // ::: 块里的问句不算提问）。**每一次放宽都可能把判据放宽成恒真**——所以每一条都要
+  // 还有一个「必然该报」的样例，否则归零就只是哑了。
+  const mustReport = {
+    起笔: '## 甲\n\n本节介绍视场角与焦距的关系。\n\n内容。\n',
+    回收: '## 甲\n\n这个数从哪儿来？\n\n第一段。\n\n第二段。\n',
+    篇幅: '## 甲\n\n' + '字'.repeat(4100) + '\n',
+    并列: '## 反解焦距的三种等价写法\n\n一段铺开。\n\n又一段。\n',
+    符号: '## 甲\n\n这里有 $W$、$w$、$D$、$f$ 四个量，还有 $N$ 与 $p$。\n',
+    类比: '## 甲\n\n电流就像水流一样。\n\n然后讲别的。\n',
+  };
+  const missing = [];
+  for (const [criterion, markdown] of Object.entries(mustReport)) {
+    const found = inspect(markdown).filter((item) => item.判据 === criterion);
+    if (found.length === 0) missing.push(criterion);
+  }
+  assert.deepEqual(missing, [], `这些判据已经报不出来了（放宽过头）：${missing.join('、')}`);
+});
+
 test('固定收尾（原文在哪儿 / 三句要能说出来）不进体检', () => {
   const markdown = '## 甲\n\n内容。\n\n## 原文在哪儿\n\n| 序号 | 名称 |\n| --- | --- |\n\n## 三句要能说出来\n\n- 一句话。\n';
   assert.equal(inspect(markdown).length, 0);
