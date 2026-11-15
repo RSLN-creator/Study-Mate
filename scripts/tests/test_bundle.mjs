@@ -265,10 +265,18 @@ test('packed npm package loads CLI and both plugins inside node_modules', t => {
     return result;
   };
   const packed = passed(npm(['pack', '--ignore-scripts', '--offline', '--json', '--pack-destination', packs], root));
+  // `npm pack --json` 的输出形状随 npm 大版本变过：npm ≤11 给**数组** `[{name,version,files}]`，
+  // npm 12 给**按包名键控的对象** `{"<name>": {...}}`。两种都按「取第一个包的报告」归一，
+  // 否则同一个门禁在 npm 11 上绿、在 npm 12 上抛 `Cannot read properties of undefined`——
+  // 而本机恰好两套 npm 并存（PATH 上是 11，`npm_execpath` 指向 12），于是
+  // `node --test` 直接跑绿、`npm test` 跑红，红的原因还跟被测代码无关。
+  const packReport = JSON.parse(packed.stdout);
+  const [manifest] = Array.isArray(packReport) ? packReport : Object.values(packReport);
+  assert.ok(manifest && manifest.name, `npm pack --json 的输出形状认不出来：${packed.stdout.slice(0, 200)}`);
   // 这份就是发布件：Release 的发放白名单（validatePack）必须认它。#155 之前门禁里没人问过
   // 这一句——README.en.md 不在 files 里、npm 却一定会打进去，于是门禁全绿、发布卡死。
-  validatePack(JSON.parse(packed.stdout)[0]);
-  const archive = path.join(packs, JSON.parse(packed.stdout)[0].filename);
+  validatePack(manifest);
+  const archive = path.join(packs, manifest.filename);
   passed(npm(['install', archive, '--offline', '--ignore-scripts', '--no-audit', '--no-fund', '--package-lock=false'], consumer));
   const installed = path.join(consumer, 'node_modules', '@yunmiao', 'studymate');
   // 必须是 npm 解出来的真实 node_modules 路径；源码检出与 npm link 都复现不了这次故障。

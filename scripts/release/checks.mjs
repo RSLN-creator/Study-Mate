@@ -434,6 +434,11 @@ const groups = {
       // #83：原四份 Python 套件的**行为移植**（技能规则、技能调用面、词表、发布元数据）——它们守的东西一件都没退役（提示词规则仍在
       // 那些技能里、调用面仍分角色、三档词表仍在 schema 里、发布元数据仍要与 tag 对齐）。
       'scripts/tests/test_skill_rules.mjs',
+      // 讲法体检（`preset/skills/lesson-design/SKILL.md` §三 六条判据的分辨力）：起笔是概括还是
+      // 具体、末段回没回收起笔的疑问、4000 字复核线、标题写「N 个东西并列」、一段里符号超三个
+      // 且还没做过计算、类比没有断点声明。工具在 `scripts/tools/lesson-style-check.mjs`，
+      // 出的是**非阻断提醒**（与学生看到的课件质量线同级），这条套件只钉「它报得对不对」。
+      'scripts/tests/test_lesson_style.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',

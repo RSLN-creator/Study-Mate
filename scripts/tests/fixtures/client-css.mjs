@@ -14,9 +14,12 @@
 */
 import fs from 'node:fs';
 
-/** 插件内联 CSS 的原文。`const CSS = \`…\`;` 那一串，CSS 体内没有反引号与 `${`。 */
+/** 插件内联 CSS 的原文。`const CSS = \`…\`;` 那一串，CSS 体内没有反引号与 `${`。
+ *  **行尾写 `\r?\n`**：Windows 检出（`core.autocrlf`）让盘上是 CRLF，只认 `\n` 会让这五个
+ *  读 CSS 的套件在 Windows 上全红，而红的原因跟被测代码无关——它们报的是一句「解析口径要
+ *  跟着改」，看着像源码改了，其实只是行尾。 */
 export function extractCss(source) {
-  const match = /const CSS = `([\s\S]*?)`;\n/.exec(source);
+  const match = /const CSS = `([\s\S]*?)`;\r?\n/.exec(source);
   if (!match) throw new Error('lib/client.js 里找不到 `const CSS = \\`…\\`;` —— 解析口径要跟着改');
   return match[1];
 }
