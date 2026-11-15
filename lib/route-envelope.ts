@@ -35,11 +35,11 @@
  * 一个没有任何路由会回的错误分支写代码。
  */
 export const ROUTE_ERROR_CODES = [
-  'body-invalid', 'evidence-invalid', 'expected-version-required',
+  'body-invalid', 'event-invalid', 'evidence-invalid', 'expected-version-required',
   'file-shape-unknown', 'http-error', 'internal', 'lesson-missing', 'markdown-invalid',
   'method-not-allowed', 'model-unavailable', 'name-conflict',
   'network', 'no-workspace', 'node-invalid', 'operation-id-conflict', 'operation-id-invalid',
-  'path-invalid', 'preset-unavailable', 'questions-invalid',
+  'path-invalid', 'preset-unavailable', 'progress-invalid', 'progress-missing', 'questions-invalid',
   'session-create-failed', 'subject-invalid', 'title-invalid',
   'topic-invalid', 'version-conflict', 'workspace-missing', 'write-failed', 'write-verification-failed',
 ] as const;

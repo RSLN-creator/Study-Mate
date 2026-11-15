@@ -214,8 +214,8 @@ test('科目与节点的键名是页面依赖的契约，逐个钉住', () => {
   assert.deepEqual(Object.keys(subject).sort(), [
     'continue_node', 'created_at', 'glossary', 'goal', 'levels',
     'misconception_issues', 'misconception_library', 'misconceptions', 'mission', 'name', 'nodes',
-    'order', 'project', 'records', 'reference', 'reference_version', 'resources_md', 'slug',
-    'stats', 'status', 'updated_at',
+    'order', 'progress_version', 'project', 'records', 'reference', 'reference_version', 'resources_md',
+    'slug', 'stats', 'status', 'updated_at',
   ]);
 
   const [node] = subject.nodes;
@@ -552,6 +552,8 @@ test('缺失的可选文件一律给空值，不让整份 payload 崩掉', () =>
   assert.equal(subject.resources_md, '');
   assert.deepEqual(subject.reference, []);
   assert.match(subject.reference_version, /^[0-9a-f]{16}$/, '空目录也要有版本号，不能是空串');
+  // 进度不一样：没有 progress.yaml 就**没有落点**，读回来的版本号是空串（不是空文件的基线）
+  assert.equal(subject.progress_version, '', '没有 progress.yaml 时 progress_version 是空串');
   assert.deepEqual(subject.records, []);
   assert.equal(subject.nodes[0].lesson_md, '');
   assert.equal(subject.nodes[0].lesson, '');

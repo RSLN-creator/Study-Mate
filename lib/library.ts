@@ -48,6 +48,9 @@ import { normalizeMisconceptions, misconceptionIssues as misconceptionIssuesOf }
 import type { Misconception } from './core/misconceptions.ts';
 // 作答数据（attempts/<NNNN>-<节点id>.json）与课件一一对应，绝不写回题库（ADR-0007）
 import { readAttempts, attemptsVersion } from './attempts.ts';
+// 进度的版本号与写入端（lib/progress.ts）同源：写回来的「读完」（ADR-0015）要拿它当
+// expectedVersion，两边各算一份就会出现「明明没人动过却报冲突」。这里只把结果挂进 payload。
+import { progressVersion } from './progress.ts';
 
 /* ── 形状 ──────────────────────────────────────────────────────────────────
    这一份 JSON 是与阅读端（lib/client.js）之间的契约：字段名、层级、空值口径都按它走。
@@ -144,6 +147,11 @@ interface SubjectPayload {
   resources_md: string;
   reference: ReferenceEntry[];
   reference_version: string;
+  /**
+   * `progress.yaml` 的版本号。写回「读完」（`POST /api/studymate/progress`，ADR-0015）时把它当
+   * `expectedVersion` 带上来；文件不在是空串（那时写不进去：没有这份文件就没有落点）。
+   */
+  progress_version: string;
   /**
    * 误解记录（单一落点：misconceptions.yaml）。旧文件里 progress.yaml 也有一份——
    * 那份**不再读**：双落点只会带来不同步（目标态规格 §5.4）。旧文件仍在盘上、仍读得进，
@@ -603,6 +611,7 @@ function buildSubject(subjectDir: string, dirName: string, workspace: string): S
     resources_md: readTextIfPresent(path.join(subjectDir, 'RESOURCES.md')) ?? '',
     reference,
     reference_version,
+    progress_version: progressVersion({ workspace, subject: slug }),
     misconceptions,
     // 与 misconceptions 同源：两份字段名都留着，阅读端从哪一份读都拿得到同一个结果
     misconception_library: misconceptions,

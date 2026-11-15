@@ -518,6 +518,7 @@ export function evidenceRank(kind: unknown): number {
 export type ProgressEvent =
   | { readonly kind: '开始学习' }
   | { readonly kind: '证据通过'; readonly evidence: EvidenceKind }
+  | { readonly kind: '读完' }
   | { readonly kind: '要求复习' };
 
 export interface AdvanceResult {
@@ -536,6 +537,11 @@ export interface AdvanceResult {
  * - `证据通过`：**只有独立证据**能把状态推到「已学完」；自评、同日重试、关键词标签、
  *   仅浏览过一律不动，并说明为什么。「延迟重测」是时间判据，由调用方判断后选择是否
  *   发这个事件——这一层不读钟。
+ * - `读完`：学生**通读到末尾**这一事实 → 未开始 / 学习中 都到「已学完」。它与 `证据通过`
+ *   是**并列的两条路、分工不同**：`证据通过` 走的是「独立证据够不够」的资格判断（实验课
+ *   验收那条线），而 `读完` 只是「这一课读完了」这个事实，**不要求任何证据**——所以它既不进
+ *   `NON_INDEPENDENT_EVIDENCE`（那份排除清单管的是 `证据通过` 的资格），也不改变后者的语义。
+ *   哪些课适用由调用方守（例如 `kind: 实验` 的课只按验收结论置位），这一层只认事件。
  * - `要求复习`：已学完 → 学习中（这是**回退**，刻意留的：状态是事实，不是奖杯）。
  */
 export function advance(raw: unknown, event: ProgressEvent): AdvanceResult {
@@ -552,6 +558,11 @@ export function advance(raw: unknown, event: ProgressEvent): AdvanceResult {
       if (from === '已学完') return step(from, '已经是「已学完」，不重复置位');
       return step('已学完', `独立证据「${event.evidence}」通过：${from} → 已学完`);
     }
+    case '读完':
+      // 事实不是自评：学生读到哪儿由阅读端看着，不需要他再自我评价一次，也不需要第三方判断
+      // （与 `证据通过` 的分工见上）。已经学完的不重复置位——回退口仍只有 `要求复习` 一个。
+      if (from === '已学完') return step(from, '已经是「已学完」，不重复置位');
+      return step('已学完', `读完：${from} → 已学完（学生通读到末尾，是事实、不是自评）`);
     case '要求复习':
       if (from === '已学完') return step('学习中', '要求复习：已学完 → 学习中');
       if (from === '学习中') return step(from, '已经在「学习中」');

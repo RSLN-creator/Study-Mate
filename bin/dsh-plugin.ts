@@ -8,7 +8,8 @@
 //   3. 给阅读端（Client 半 lib/client.js）供学习工作区数据：
 //      GET  /api/studymate/library   —— 整份快照，走宿主的 /api 认证通道，与其他插件取业务数据同一条路；
 //      GET  /api/studymate/asset     —— 课件配图（二进制）；
-//      GET/POST /api/studymate/reference —— 学生自加的参考资料：读取与写入（ADR-0010）。
+//      GET/POST /api/studymate/reference —— 学生自加的参考资料：读取与写入（ADR-0010）；
+//      POST /api/studymate/progress  —— 「读完」那一笔进度（ADR-0015，实现在 lib/progress-route.ts）。
 //
 // **原生工具不在这里**（#138）：九个学习工具 + 五个 `studymate_task_*` + 一个 `studymate_lab_run`
 // 由「学习模式」预设那条插件行（`@yunmiao/studymate/learning-preset`）注册进**预设作用域**，
@@ -246,6 +247,11 @@ export async function apply(ctx: PluginContext): Promise<void> {
 
   // 作答数据（#72）：路径、方法、请求体、状态码映射都在 lib/attempts-route.ts 里，这里只挂一行
   import('../lib/attempts-route.ts').then((module) => module.registerAttemptRoutes(ctx), (error) => { console.warn(`StudyMate：作答数据路由没挂上。${error instanceof Error ? error.message : String(error)}`); });
+
+  // 读完进度（ADR-0015）：学生在阅读端把一课读到末尾 → POST /api/studymate/progress，
+  // 把该节点的 status 置为「已学完」。保形写回与两件武器（幂等、版本号）都在 lib/progress.ts，
+  // 这里同样只挂一行（与上面那条同一种姿势）。
+  import('../lib/progress-route.ts').then((module) => module.registerProgressRoutes(ctx), (error) => { console.warn(`StudyMate：读完进度路由没挂上。${error instanceof Error ? error.message : String(error)}`); });
 
   // 实验代跑（#77）：学生按「跑一次」→ POST /api/studymate/lab-run。计划与执行与原生工具
   // studymate_lab_run 共用一份实现，这里也只挂一行。

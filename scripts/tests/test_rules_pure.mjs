@@ -386,6 +386,35 @@ test('推进：只有独立证据能推到「已学完」', () => {
   assert.equal(advance('初步理解', { kind: '证据通过', evidence: '运行结果' }).from, '学习中');
 });
 
+test('推进：「读完」是学生的通读事实，未开始与学习中都推到「已学完」', () => {
+  // ADR-0015：普通节点的完成口径。它**不是**「证据通过」那样要过资格判断的证据，
+  // 所以也不许混进那份排除清单（混进去就等于把这条路又封回「学习中」）。
+  assert.deepEqual(advance('未开始', { kind: '读完' }), {
+    from: '未开始', to: '已学完', changed: true,
+    reason: '读完：未开始 → 已学完（学生通读到末尾，是事实、不是自评）',
+  });
+  assert.deepEqual(advance('学习中', { kind: '读完' }), {
+    from: '学习中', to: '已学完', changed: true,
+    reason: '读完：学习中 → 已学完（学生通读到末尾，是事实、不是自评）',
+  });
+  // 已经是「已学完」：不重复置位（回退口仍只有「要求复习」一个）
+  const done = advance('已学完', { kind: '读完' });
+  assert.equal(done.to, '已学完');
+  assert.equal(done.changed, false);
+  assert.match(done.reason, /已经是「已学完」，不重复置位/);
+  // 旧六档读到的值也照样按三档推进
+  assert.equal(advance('初步理解', { kind: '读完' }).from, '学习中');
+  // 「读完」不要求独立证据：它不在排除清单里，也不需要 evidence 字段
+  assert.equal(NON_INDEPENDENT_EVIDENCE.includes('读完'), false,
+    '「读完」被塞进排除清单了：它是与「证据通过」并列的另一条路，不是一种证据');
+});
+
+test('推进：「要求复习」仍是唯一的回退口，读完不改变它', () => {
+  // 新增一条推进事件不该把回退也一起改了：状态是事实，不是奖杯。
+  assert.equal(advance('已学完', { kind: '要求复习' }).to, '学习中');
+  assert.equal(advance('已学完', { kind: '要求复习' }).changed, true);
+});
+
 test('推进：「要求复习」是一次回退，未开始不动', () => {
   assert.equal(advance('已学完', { kind: '要求复习' }).to, '学习中');
   assert.equal(advance('已学完', { kind: '要求复习' }).changed, true);
@@ -395,7 +424,7 @@ test('推进：「要求复习」是一次回退，未开始不动', () => {
 
 test('推进：签名里没有「谁说的」——模型输出进不来', () => {
   // 规格 §7.5「模型输出不能直接改进度状态」。这里靠的是**签名里根本没有这个位置**：
-  // 事件只有三种 kind，多塞的字段一个都不读。
+  // 事件只有四种 kind（开始学习 / 证据通过 / 读完 / 要求复习），多塞的字段一个都不读。
   const smuggled = advance('未开始', { kind: '证据通过', evidence: '自评', model: 'gpt', role: 'practice-evaluator', said: '已掌握' });
   assert.equal(smuggled.to, '未开始');
   const unknownEvent = advance('未开始', { kind: '模型判定通过' });

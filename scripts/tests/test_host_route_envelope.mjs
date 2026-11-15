@@ -24,6 +24,7 @@ import { fileURLToPath } from 'node:url';
 
 import { ROUTE_ERROR_CODES, errorBody, routeError } from '../../lib/route-envelope.ts';
 import { handleAttempts } from '../../lib/attempts-route.ts';
+import { handleProgress } from '../../lib/progress-route.ts';
 import { runRouteRequest } from '../../lib/lab/route.ts';
 
 const ROOT = path.resolve(fileURLToPath(new URL('../../', import.meta.url)));
@@ -80,6 +81,24 @@ test('实验代跑路由：坏请求回同一个信封', async () => {
   assert.equal(body.ok, false);
   assert.ok(CODES.has(body.error.code));
   assert.ok(body.error.message.length > 0);
+});
+
+test('读完进度路由（ADR-0015）：失败路径也回同一个信封', async () => {
+  const request = (init) => new Request('http://127.0.0.1/api/studymate/progress', init);
+  const cases = [
+    [405, request({ method: 'GET' })],
+    [500, request({ method: 'POST', body: '{}' })],   // 没有工作区（DSH_HOME 指向空目录）
+  ];
+  for (const [status, init] of cases) {
+    const response = await handleProgress(init);
+    assert.equal(response.status, status);
+    const body = await response.json();
+    assert.equal(body.ok, false, `HTTP ${status} 的信封少了 ok:false`);
+    assert.equal(typeof body.error, 'object');
+    assert.ok(CODES.has(body.error.code), `HTTP ${status} 的码「${body.error.code}」不在词表里`);
+    assert.ok(body.error.message.length > 0, `HTTP ${status} 的 message 是空的：学生看不到能自救的话`);
+    assert.equal(body.message, undefined, 'message 只许在 error 里（顶层那份是旧形状）');
+  }
 });
 
 /* ── 2. 词表：调用点用了表外的码就红 ───────────────────────────────────── */

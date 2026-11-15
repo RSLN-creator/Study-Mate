@@ -47,6 +47,8 @@ export const REFERENCE_ENDPOINT = '/api/studymate/reference';
 export const ASSET_ENDPOINT = '/api/studymate/asset';
 /** 作答数据的写入口（#72）：离线页面明确回 403，不假装落盘。 */
 export const ATTEMPTS_ENDPOINT = '/api/studymate/attempts';
+/** 「读完」那一笔进度的写入口（ADR-0015）：离线页面同样明确回 403，不假装改了状态。 */
+export const PROGRESS_ENDPOINT = '/api/studymate/progress';
 
 /** 冻结模块表里的键名：与宿主给阅读端的名字逐字相同（client.js 只 require 'react'）。 */
 export const VENDOR_MODULES = {
@@ -166,12 +168,13 @@ export function hostScript(math: boolean): string {
   var REFERENCE_ENDPOINT = ${JSON.stringify(REFERENCE_ENDPOINT)};
   var ASSET_ENDPOINT = ${JSON.stringify(ASSET_ENDPOINT)};
   var ATTEMPTS_ENDPOINT = ${JSON.stringify(ATTEMPTS_ENDPOINT)};
+  var PROGRESS_ENDPOINT = ${JSON.stringify(PROGRESS_ENDPOINT)};
 
-  /* 离线页面是**只读**的：这条话说一次，两处写入口（作答、资料）都照它回。 */
+  /* 离线页面是**只读**的：这条话说一次，三处写入口（作答、资料、读完进度）都照它回。 */
   var READ_ONLY = {
     error: 'read-only',
-    message: '这是导出的离线页面，只能读：作答与资料都要回 DSH 的阅读端里写'
-      + '（那里才会落进 attempts/ 与 reference/）。这次作答只留在当前这一屏。',
+    message: '这是导出的离线页面，只能读：作答、资料与「读完」的进度都要回 DSH 的阅读端里写'
+      + '（那里才会落进 attempts/、reference/ 与 progress.yaml）。这次只留在当前这一屏。',
   };
 
   /* ① 冻结模块表（宿主的懒 CJS 模型）：vendor/ 下的第三方构建按名字登记，第一次取用才跑。
@@ -252,6 +255,10 @@ export function hostScript(math: boolean): string {
     }
     if (target === ATTEMPTS_ENDPOINT) {
       // 作答是**写**：离线页面不落盘（也不假装落了）。这一屏照常判分，只是回不去。
+      return Promise.resolve(json(READ_ONLY, 403));
+    }
+    if (target === PROGRESS_ENDPOINT) {
+      // 「读完」也是**写**（改的是 progress.yaml 的 status）：离线页面一样不落盘。
       return Promise.resolve(json(READ_ONLY, 403));
     }
     return Promise.resolve(json({
