@@ -466,7 +466,11 @@ const groups = {
       // 背默卡的**要点表**必须与课件对得上（`test_recite_card.mjs`）：数量 ≥15、三类齐、
       // 每条是可判真假的断言、关键数字按完整边界匹配课件原文。最后一条是真踩到的——
       // 编造的「4.2 nA」曾被判成"在课件里"，因为它命中了「74.2 mm」与「4.21°」。
-      'scripts/tests/test_recite_card.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
+      // **判分键与要点表绝不能落进阅读端可读的目录**（`test_no_answer_leak.mjs`）。
+      // 2026-11-15 我自己差点泄了：为了让卷子一键能打开，把卷子/判分键/背默卡一起拷进了
+      // `reference/`——阅读端会把它们列进「参考资料」，学生打开就看见答案。
+      // `assessments/` 阅读端不认识，那正是判分键唯一的防线。
+      'scripts/tests/test_no_answer_leak.mjs',      'scripts/tests/test_recite_card.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',
