@@ -459,7 +459,11 @@ const groups = {
       // 半宽数值要与 bootstrap 脚本现算的一致。写错的样子很难看出来——「改名的脚本」「换了参数的
       // 半宽」都"看着像真的"。实测抓到过一次：索引写 14–19 分，现算是 6.3–18.8（漏了"几乎全对"
       // 那档 6.3），改完又发现判分键里同一个数也漏了这一档。
-      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
+      // 背默卡的计分与闸门（`scripts/tools/recite-score.mjs`）：S1 命题召回 + S2 结构档 + 迁移探针，
+      // 三条闸门缺一不算通过、「字面搬运」S2=0 时 S1 再高也不过。**还有一条最要紧的**：
+      // 10 条要点、S1=0.8 时 bootstrap 半宽是 0.25——0.8 这条闸门线根本分辨不了 0.65 与 0.95。
+      // 判分键里那张「要点数 → 半宽」的表由这条套件现算比对，写错会红。
+      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',
