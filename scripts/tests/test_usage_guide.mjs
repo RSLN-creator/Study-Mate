@@ -69,3 +69,31 @@ test('旧顺序不许原样留着（反证）', () => {
   const text = read();
   assert.doesNotMatch(text, /先把.{0,10}读两三遍。读的过程中/, '这一句是旧顺序的原文，不该出现');
 });
+
+test('操作单在手，六步齐全，且命令都真实存在', () => {
+  // 二十九轮攒了 10 个工具、6 份骨架，散在各处。**记不住就不会跑；不会跑，判据等于不存在。**
+  const sheet = fs.readFileSync(path.join(ROOT, 'docs/使用/做一次检验-操作单.md'), 'utf8').replaceAll('\r\n', '\n');
+  for (const step of ['零、先跑一遍总检查', '一、准备', '二、读', '三、判分', '四、报分', '五、存档', '六、什么时候再做一次']) {
+    assert.match(sheet, new RegExp(step.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `操作单缺「${step}」`);
+  }
+  // 命令必须在 package.json 里真的存在
+  const scripts = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).scripts;
+  const mentioned = [...new Set([...sheet.matchAll(/npm run ([\w:]+)/g)].map((m) => m[1]))];
+  assert.ok(mentioned.length >= 2, '操作单里应当有可跑的命令');
+  const missing = mentioned.filter((name) => !(name in scripts));
+  assert.deepEqual(missing, [], `操作单提到了不存在的 npm 脚本：${missing.join('、')}`);
+
+  // 两处「必须人做」要标出来
+  assert.match(sheet, /\*\*人做\*\*/, '要标出哪几步必须人做');
+  assert.match(sheet, /判分键现在才打开/, '判分键的打开时机要在操作单里');
+});
+
+test('总检查工具本身能跑，且失败时会给非零码', () => {
+  // 一条永远通过的检查等于没有。这里只验它能跑、退出码语义正确，
+  // 真正的失败路径由各套件自己的反证覆盖。
+  const tool = path.join(ROOT, 'scripts/tools/study-method-check.mjs');
+  assert.ok(fs.existsSync(tool), '总检查工具不在');
+  const text = fs.readFileSync(tool, 'utf8');
+  assert.match(text, /process\.exitCode = 1/, '没通过时要给非零退出码');
+  assert.match(text, /CHECKS/, '检查项要在表里，方便看有哪些');
+});
