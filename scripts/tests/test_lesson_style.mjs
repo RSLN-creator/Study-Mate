@@ -34,6 +34,20 @@ test('回收：回指不只「回到开头」一种写法（逐条溯源也算�
   assert.equal(hits(byReference, '回收').length, 0);
 });
 
+test('回收：泛词不能当回指（「第一段」出现不等于「回到第一段」）', () => {
+  // 实测踩过的坑：把 `第一段` 单独放进回指词表，负例里写着「第一段。」就当场失效——
+  // 判据变成恒真，反证根本报不出来。回指要说的是**回到**第一段。
+  const withWordOnly = '## 甲\n\n这个数从哪儿来？\n\n第一段。\n\n第二段。\n';
+  assert.equal(hits(withWordOnly, '回收').length, 1, '「第一段」本身不是回指');
+  const realBackref = '## 甲\n\n这个数从哪儿来？\n\n第一段。\n\n回到开头那个疑问，它来自靶面宽的两种取法。\n';
+  assert.equal(hits(realBackref, '回收').length, 0);
+});
+
+test('回收：起笔不是提问就不要求回收（场景描述不构成承诺）', () => {
+  const scene = '## 甲\n\n桌上摆着两台候选机器，两份 datasheet 上都印着跟「距离」有关的数字。\n\n内容。\n\n另一段。\n';
+  assert.equal(hits(scene, '回收').length, 0);
+});
+
 test('篇幅：4000 字是线，3999 不报、4001 报', () => {
   const make = (n) => `## 甲\n\n${'字'.repeat(n)}\n`;
   assert.equal(hits(make(3999), '篇幅').length, 0);
@@ -45,6 +59,20 @@ test('并列：只看标题，不数表格列（4 列表不该被当成并列罗
   const enumerated = '## 反解焦距的三种等价写法\n\n内容。\n';
   assert.equal(hits(table, '并列').length, 0, '多列表格是好事，不该报');
   assert.equal(hits(enumerated, '并列').length, 1);
+});
+
+test('并列：标题写 N 个但已经用 ### 拆开 / 节首给了总表的，都不报', () => {
+  // 实测踩过的两个坑：`0010-talk-ready` 的「五段各自要说什么」用五个 `###` 分开了；
+  // `0001-intro` 的「三条会让采购填错的读法」先一句引子、再来一张两列表三行——
+  // 那正是规范里说的「节首给一张总表」。
+  const split = '## 五段各自要说什么\n\n### 第 1 段\n\n内容。\n\n### 第 2 段\n\n内容。\n\n### 第 3 段\n\n内容。\n';
+  assert.equal(hits(split, '并列').length, 0, '已经用 ### 拆开了');
+
+  const withLeadTable = '## 三条读法\n\n上面这些数能证伪三句流传很广的话。\n\n| 话 | 为什么错 |\n| --- | --- |\n| 甲 | 一 |\n| 乙 | 二 |\n| 丙 | 三 |\n\n收尾一句。\n';
+  assert.equal(hits(withLeadTable, '并列').length, 0, '节首给了总表');
+
+  const notSplit = '## 五段各自要说什么\n\n一段铺到底，没拆也没表。\n';
+  assert.equal(hits(notSplit, '并列').length, 1, '既没拆也没总表要报');
 });
 
 test('符号：LaTeX 命令不算符号，真符号超三个要报', () => {
@@ -109,6 +137,17 @@ test('类比：没有断点声明要报，带断点声明不报', () => {
   const withBreak = '## 甲\n\n电流就像水流一样，从电源流向电阻。但它只在这一处成立：剪断导线电流不会像水一样漏出来。\n';
   assert.equal(hits(bare, '类比').length, 1);
   assert.equal(hits(withBreak, '类比').length, 0);
+});
+
+test('类比：数值换算不算类比（「1.8 kN 相当于 180 kg」不是结构映射）', () => {
+  // 实测踩过的坑：`0008-paper1-hotpress` 有两处「相当于」，一处是「1.8 kN，相当于
+  // 180 kg 的重物压着它」（换算，不可能产生 misconception），一处是「作用相当于给一个
+  // 相发的身份证号」（结构类比，要断点声明）。第一版不区分，两处都报。
+  const numeric = '## 甲\n\n压力值得算一下：10 MPa 摊在 φ15 mm 的圆上约 1.8 kN，相当于 180 kg 的重物压着它。\n';
+  assert.equal(hits(numeric, '类比').length, 0, '换算不是类比');
+
+  const structural = '## 甲\n\n这两串数字的作用相当于给一个相发的身份证号。\n\n然后讲别的。\n';
+  assert.equal(hits(structural, '类比').length, 1, '结构类比要报');
 });
 
 test('固定收尾（原文在哪儿 / 三句要能说出来）不进体检', () => {

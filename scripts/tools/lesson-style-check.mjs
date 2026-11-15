@@ -33,13 +33,45 @@ export function sections(markdown) {
   }
   return out
     .filter((section) => !STOP_HEADING.test(`## ${section.title}`))
-    .map((section) => ({
-      title: section.title,
-      body: section.lines.join('\n'),
-      // 正文字数只算散文：去掉围栏、表格行、图块字段
-      chars: countProseChars(section.lines.join('\n')),
-      paragraphs: section.lines.join('\n').split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean),
-    }));
+    .map((section) => {
+      const body = section.lines.join('\n');
+      // `###` 子标题数：节里已经用三级标题把内容拆开了的证据
+      const subsections = section.lines.filter((line) => line.startsWith('### ')).length;
+      return {
+        title: section.title,
+        body,
+        subsections,
+        // 首段里那张总表有几行（表头与分隔行不算）
+        leadTableRows: leadingTableRows(section.lines),
+        chars: countProseChars(body),
+        paragraphs: body.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean),
+      };
+    });
+}
+
+/** 节的前四段里有没有一张 ≥3 数据行的表。
+ *
+ * **不要求表格紧贴节首**：`0001-intro` 的「三条会让采购填错的读法」先一句
+ * 「上面这些数能证伪三句流传很广的话」，然后才是那张两列表——一句话引出一张总表，
+ * 是完全合规的写法，卡"紧接开头"会把它误判成没给总表。 */
+function leadingTableRows(lines) {
+  let blank = 0;
+  let rows = 0;
+  let counting = false;
+  for (const line of lines) {
+    if (blank > 4) break;                         // 已经过了前四段
+    const isTable = /^\s*\|/.test(line);
+    if (isTable) { counting = true; }
+    else if (counting) { break; }                 // 这张表结束了
+    else {
+      if (line.trim() === '') { if (!/^\s*$/.test(line)) blank += 1; }
+      if (/^\s*$/.test(line)) blank += 1;
+      continue;
+    }
+    if (/^\s*\|[\s:|-]+\|\s*$/.test(line)) continue;   // 分隔行
+    rows += 1;
+  }
+  return Math.max(0, rows - 1);                   // 减去表头
 }
 
 function countProseChars(text) {
@@ -75,30 +107,37 @@ function firstProseParagraph(section) {
   return '';
 }
 
-/* ── 判据 2：末段有没有回收起笔 ──────────────────────────────────────── */
 /* 回指不一定要出现「回到开头」这种字眼。实测撞到的两种合规写法：
  *   · 「范本里有三处值得留意，**它们都是前面几课挣来的**」——用「前面/上文/这些都」回指；
  *   · 「这一句**来自第 8 课**」「第 16 课补的」——把回收摊成逐条溯源。
- * 所以判据看的是**末段有没有一处把读者的视线拉回已讲过的内容**，而不是找固定词。 */
+ *
+ * 两个坑（都实测踩过）：
+ *   · `第一段` 单独一个词太泛——负例里就写着「第一段。」，判据当场失效。回指要说的是
+ *     **回到**第一段，不是"出现了第一段"这个字。
+ *   · `所以.{0,6}多` 这种宽泛的连接词会把任何一段带「所以」的收尾都算成回收。删掉。 */
 const BACKREFERENCE = new RegExp([
-  '回到', '开头', '本节一开始', '上面那个', '前面那个', '一开始那个', '最初', '起先', '第一段',
-  '这个问题', '那个疑问', '这就是为什么', '所以.{0,6}多',
-  '前面.{0,8}(课|节|面)', '上文', '此前', '刚才.{0,6}(那|这)', '前面几',
-  '它们都', '这些都', '这三处', '这两处', '这三样', '这三条', '这三件',
+  '回到', '回指', '本节一开始', '上面那个', '前面那个', '一开始那个',
+  '回到开头', '开头那句', '开头那个', '开头摆', '开头提',
+  '那个疑问', '这个问题.{0,10}(答|说|回到)',
+  '这就是为什么', '前面.{0,8}(课|节|面)', '上文', '此前', '刚才.{0,6}(那|这)',
+  '前面几', '它们都', '这些都', '这三处', '这两处', '这三样', '这三条', '这三件',
   '来自第', '第 ?\\d+ ?课(补|给|里)', '这是第 ?\\d+ ?课',
 ].join('|'));
 
 function checkBackReference(section) {
   const first = firstProseParagraph(section);
   if (!first) return null;
-  // 起笔本身就是一句话的场景描述（不是提问）时，不强制"回收"
-  const isQuestion = /[？?]/.test(first) || EMPTY_SCENE.test(first);
-  if (!isQuestion) return null;
-  const tail = lastProseParagraph(section);
-  if (!tail) return null;
-  if (BACKREFERENCE.test(tail)) return null;
-  return { 判据: '回收', 级: '提醒', 节: section.title,
-    说: '起笔摆了一个处境或疑问，末段没有回指它——要么末段把它解释掉，要么这一节讲漏了东西。' };
+  // 只对**显式提问式**起笔要求回收。一句场景描述（"桌上摆着两台机器"）不构成承诺，
+  // 不回收不算问题——把场景也纳进来会让这条判据在几乎每一节上都报。
+  if (!/[？?]/.test(first)) return null;
+  // **看全节，不只末段**：`0006-material-abx3` 的「容差因子当判据」在第 2 段就把
+  // "t 落在 0.7–1.1" 答了，末段接的是练习说明——只查末段会把它误判成没回收。
+  const rest = section.paragraphs.slice(section.paragraphs.indexOf(first) + 1).join('\n');
+  if (BACKREFERENCE.test(rest)) return null;
+  // 降级为**提示**：这条判据只看"有没有一句话把视线拉回去"，判不出"答得对不对"，
+  // 信号弱，不该和符号、类比那几条同级。
+  return { 判据: '回收', 级: '提示', 节: section.title,
+    说: '起笔用了提问式，但全节没有一处把视线拉回去（"回到开头/上文/来自第几课"这类）。不是每个提问都要回收，但若这个提问是为下文立的靶子，就该有一句话把它收掉。' };
 }
 
 function lastProseParagraph(section) {
@@ -121,11 +160,17 @@ function checkLength(section) {
 
 function checkEnumeration(section) {
   // **只看标题，不数表格列**：一张 6 列的对照表是好事不是缺陷，把它算成"并列罗列"会让
-  // 这条判据在几乎每一节上都报一次，真正该看的那几节反而被淹没。判据的靶子是
-  // 「标题本身就写着 N 个东西并列」，那是这一节的着眼点不唯一的直接证据。
+  // 这条判据在几乎每一节上都报一次，真正该看的那几节反而被淹没。
+  //
+  // 两种已经算"拆开"的写法，都不报：
+  //  · `###` 子标题把每个对象分开（`0010-talk-ready` 的「五段各自要说什么」）；
+  //  · 节首一张**多行**总表把每个对象收在一起（`0001-intro` 的「三条会让采购填错的读法」
+  //    就是两列表三行——那正是规范里说的"节首给一张总表"）。
   if (!ENUMERATION_HEADING.test(section.title)) return null;
+  if (section.subsections >= 3) return null;
+  if (section.leadTableRows >= 3) return null;
   return { 判据: '并列', 级: '提示', 节: section.title,
-    说: '标题就是"N 个东西并列"。要么拆成 N 节，要么节首给一张总表、节内每个对象只写"与总表不同的那一点"。' };
+    说: '标题就是"N 个东西并列"，而节内既没拆成子节、也没有一张把每个对象收住的总表。要么拆成 N 节，要么节首给一张总表、节内每个对象只写"与总表不同的那一点"。' };
 }
 
 /* ── 判据 5：一段里新符号太多且没有具体计算 ─────────────────────────── */
@@ -217,18 +262,31 @@ function symbolFirstSeen(markdown) {
 
 /* ── 判据 6：类比没有断点声明 ────────────────────────────────────────── */
 const ANALOGY = /(就像|好比|如同|相当于|类似于|像是|打个比方|可以想成)/;
-const ANALOGY_BREAK = /(但它|不过这里|只在这|到这里就|不能推广|只在[^。]{0,10}成立|类比到此|断在|不准|不成立|不等于)/;
+const ANALOGY_BREAK = /(但它|不过这里|只在这|到这里就|不能推广|只在[^。]{0,10}成立|类比到此|断在|不准|不成立|不等于|不能推出|别把它当|只解释)/;
+/* 「相当于」有两种用法，只有一种算类比：
+ *  · **数值换算**：「1.8 kN，相当于 180 kg 的重物压着它」——两边都是量，不涉及结构映射，
+ *    不可能产生 misconception（实测踩过：`0008-paper1-hotpress` 这条被误报）；
+ *  · **结构性类比**：「作用相当于给一个相发的身份证号」——把 A 的关系映射到 B。
+ * 判据只抓后者：`相当于` 前面 14 字里出现"数字 + 单位"的，当换算跳过。 */
+const NUMERIC_EQUIVALENCE = /\d[\d.]*\s*(?:kN|N|kg|g|mg|MPa|Pa|mm|cm|m|μm|nm|Å|kV|V|mV|mA|A|μA|nA|s|ms|μs|ns|℃|°C|%|K|eV|Hz|kHz|MHz|GHz|W|mW|μW|J|mJ|L|mL|min|h)\s*[，,]?\s*$/;
+
+function isNumericEquivalence(text, at) {
+  const before = text.slice(Math.max(0, at - 20), at);
+  return NUMERIC_EQUIVALENCE.test(before);
+}
 
 function checkAnalogy(section) {
   const issues = [];
   for (const paragraph of section.paragraphs) {
-    if (!ANALOGY.test(paragraph)) continue;
+    const match = ANALOGY.exec(paragraph);
+    if (!match) continue;
+    if (match[0] === '相当于' && isNumericEquivalence(paragraph, match.index)) continue;
     // 断点声明可以出现在同段，也可以出现在紧接着的下一段
     const at = section.paragraphs.indexOf(paragraph);
     const window = [paragraph, section.paragraphs[at + 1] || ''].join('\n');
     if (ANALOGY_BREAK.test(window)) continue;
     issues.push({ 判据: '类比', 级: '提醒', 节: section.title,
-      说: `出现类比（${(paragraph.match(ANALOGY) || [''])[0]}）但紧跟的一两段里没有"它在哪儿断掉"的声明。没有断点声明的类比是已知会制造误解的做法（PRPER 10.1103/ch6t-qvz6）。` });
+      说: `出现类比（${match[0]}）但紧跟的一两段里没有"它在哪儿断掉"的声明。没有断点声明的类比是已知会制造误解的做法（PRPER 10.1103/ch6t-qvz6）。` });
     break;
   }
   return issues;
