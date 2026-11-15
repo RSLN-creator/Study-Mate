@@ -454,7 +454,12 @@ const groups = {
       // 这是「判分键能不能用」的唯一凭据。第一版 ICC 漏了一步归一，跑出 49.5（ICC 不可能
       // 大于 1）——一个越界但"看起来像个数"的值比报错危险得多，所以工具现在越界就拒绝给值，
       // 这条套件钉住这一点。
-      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
+      // 学习方法层的**结论索引**（`docs/设计/学习方法层-结论索引.md`）必须与代码一致：
+      // 表里提到的每个 `npm run <名字>` 要在 package.json 里存在、点名的仓库路径要在盘上、
+      // 半宽数值要与 bootstrap 脚本现算的一致。写错的样子很难看出来——「改名的脚本」「换了参数的
+      // 半宽」都"看着像真的"。实测抓到过一次：索引写 14–19 分，现算是 6.3–18.8（漏了"几乎全对"
+      // 那档 6.3），改完又发现判分键里同一个数也漏了这一档。
+      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',
