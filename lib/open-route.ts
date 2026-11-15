@@ -80,13 +80,18 @@ function isUnder(root: string, target: string): boolean {
  * 把请求里的 `subject` + `path` 解析成一个**可安全打开**的绝对路径。纯函数（只读盘、不启动进程），
  * 所以围栏能脱离「真去开一个进程」来断言。
  *
+ * `allowDir` 只给 `reveal` 用：学生要「加一份参考资料」时得先把**科目目录下的那层文件夹**
+ * 在资源管理器里打开（`reference/`），然后往里拖文件。`open`（默认应用打开）仍然只认常规文件——
+ * 拿系统去「打开」一个目录是没有意义的动作。
+ *
  * 拒绝的四种情形各有自己的码：`subject-invalid`（slug 形状不对）、`path-invalid`（越出科目目录
- * 或形状不对）、`not-found`（盘上没有）、`not-a-file`（不是常规文件）。
+ * 或形状不对）、`not-found`（盘上没有）、`not-a-file`（不是常规文件，且不允许目录）。
  */
-export function resolveOpenTarget(input: { workspace?: unknown; subject?: unknown; relPath?: unknown } = {}): OpenTarget {
+export function resolveOpenTarget(input: { workspace?: unknown; subject?: unknown; relPath?: unknown; allowDir?: unknown } = {}): OpenTarget {
   const workspace = typeof input.workspace === 'string' ? input.workspace.trim() : '';
   const subject = typeof input.subject === 'string' ? input.subject.trim() : '';
   const relPath = typeof input.relPath === 'string' ? input.relPath.trim() : '';
+  const allowDir = input.allowDir === true;
   if (!workspace || !subject) {
     return { ok: false, status: 400, code: 'subject-invalid', message: '要给出 subject（科目 slug）' };
   }
@@ -111,8 +116,8 @@ export function resolveOpenTarget(input: { workspace?: unknown; subject?: unknow
     return { ok: false, status: 404, code: 'not-found', message: '这个文件不在盘上（搬过目录？）' };
   }
   // statSync 跟符号链接：链到科目目录**之外**的目标不算「在这个目录下」，所以还要再判一次
-  if (!stat.isFile()) {
-    return { ok: false, status: 400, code: 'not-a-file', message: '只能打开常规文件' };
+  if (!stat.isFile() && !(allowDir && stat.isDirectory())) {
+    return { ok: false, status: 400, code: 'not-a-file', message: allowDir ? '只能打开常规文件或文件夹' : '只能打开常规文件' };
   }
   let real: string;
   try {
@@ -224,7 +229,7 @@ export async function handleOpen(request: Request): Promise<Response> {
     if (!mode) {
       return routeError(400, 'mode-invalid', `mode 只认 ${OPEN_MODES.join(' / ')}，收到的是 ${JSON.stringify(body.mode)}`);
     }
-    const target = resolveOpenTarget({ workspace, subject: body.subject, relPath: body.path });
+    const target = resolveOpenTarget({ workspace, subject: body.subject, relPath: body.path, allowDir: mode === 'reveal' });
     if (!target.ok) {
       return routeError(target.status, target.code, target.message);
     }
