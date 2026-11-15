@@ -65,6 +65,7 @@
     "recite": "node scripts/tools/recite-score.mjs",
     "sync:keys": "node scripts/tools/sync-key-common.mjs --write",
     "check:keys": "node scripts/tools/sync-key-common.mjs",
+    "gate:check": "node scripts/tools/gate-resolvability.mjs",
     "test:static": "node scripts/release/checks.mjs --static",
     "test:browser": "node scripts/release/checks.mjs --browser",
     "guard:export": "node scripts/release/export_guard.mjs",

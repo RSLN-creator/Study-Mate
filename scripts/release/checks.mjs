@@ -473,7 +473,11 @@ const groups = {
       // 判分键的**共用段落**必须与骨架一致（`scripts/tools/sync-key-common.mjs --check`）：
       // 背默卡计分那一整节在骨架里只有一处定义。前十四轮我改过骨架三次，**每一次真判分键
       // 都停在旧内容上**——模板对了、成品没跟上，等于没改。
-      'scripts/tests/test_key_common_sync.mjs',      'scripts/tests/test_no_answer_leak.mjs',      'scripts/tests/test_recite_card.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
+      'scripts/tests/test_key_common_sync.mjs',      'scripts/tests/test_no_answer_leak.mjs',      'scripts/tests/test_recite_card.mjs',      // **闸门线本身不可判**（`scripts/tools/gate-resolvability.mjs`）：相邻两档只差 1/n，而区间
+      // 宽度是 O(1/√n)——重叠会缩小但不归零。实测 18 点重叠 0.277、60 点 0.183、400 点 0.071。
+      // 所以「S1 ≥ 0.8」在任何要点数下都不是可判的判决；判分键里那张表由这条套件现算比对。
+      // 第一版把作答参数传成 `{}`，区间全是 [0,0]，整张表成了「全都可判」的假象。
+      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',
