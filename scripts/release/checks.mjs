@@ -492,7 +492,12 @@ const groups = {
       // `layered-practice` 的七八处（带区间、三条局限、判定带只是报告用语、剖面比总分稳、
       // 拿不准的题要写出来），**之前没有一份成品把它们一次落全**。
       // 学生答完题最可能发生的事就是：评分者只报一个总分——而那个总分的半宽是 6–19 分。
-      'scripts/tests/test_inspection_record.mjs',      'scripts/tests/test_pending_beats.mjs',      'scripts/tests/test_citation_provenance.mjs',      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
+      // **从手写判定表直接算 S1**（`recite-from-table.mjs`）：`recite-score.mjs` 要 JSON，
+      // 而判分者手上是一张「P1 命中 / P6 部分」的表。中间转一手编 JSON，是填报分单最容易
+      // 放弃的地方。这个工具直接吃那张表。
+      // 它自己踩过三个坑，全在写的时候一次犯完：`|` 开头被当跳过、只按制表符切（`P1 命中`
+      // 全丢，8 行表解析出 1 条）、`--s2 2` 里的 2 被当成文件名。**三个坑都不报错，只是算错。**
+      'scripts/tests/test_recite_from_table.mjs',      'scripts/tests/test_inspection_record.mjs',      'scripts/tests/test_pending_beats.mjs',      'scripts/tests/test_citation_provenance.mjs',      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',

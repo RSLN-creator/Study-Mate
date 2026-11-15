@@ -1,0 +1,164 @@
+#!/usr/bin/env node
+/* 从「判分者手写的逐条判定」直接算 S1 与区间，不用先编 JSON。
+ *
+ * 为什么要有它：讲解/出卷角色判完背默卡，手上是一张这样的表——
+ *     P1 命中
+ *     P3 部分
+ *     P4 未中
+ * 而 `recite-score.mjs` 要的是 JSON（`{"命中":["P1"],"部分":["P3"]}`）。
+ * **中间这一步转手，是"填报分单"最容易放弃的地方**：判完已经很累，还要编 JSON。
+ * 这个工具直接吃那张表。
+ *
+ * 用法一（推荐）：给一个 markdown 文件，里面是逐条判定行
+ *   node recite-from-table.mjs <判分表.md> [--rubric <要点表.json>] [--json]
+ *   `--rubric` 给了就一并算出「缺口」清单（哪些要点没中）。
+ *   不给也行——S1 与区间只依赖判定本身。
+ *
+ * 用法二：从 stdin 读，一行一条
+ *   echo "P1 命中" | node recite-from-table.mjs -
+ *
+ * 判定词认这些（大小写、简繁不敏感）：
+ *   命中 / 中 / hit / 1  → 1
+ *   部分 / partial / 0.5 → 0.5
+ *   未中 / 没 / miss / 0 → 0
+ *
+ * 结构档与迁移探针不在这份表里（它们是整体判断），用 `--s2` `--probe` 传：
+ *   node recite-from-table.mjs 判分表.md --s2 2 --probe 1
+ */
+import fs from 'node:fs';
+
+import { bootstrapS1, scoreRecite } from './recite-score.mjs';
+
+const CORE = [
+  [/^(命中|中|对|hit|h|1)$/i, 1, '命中'],
+  [/^(部分|半|部分命中|partial|p|0\.5|½)$/i, 0.5, '部分'],
+  [/^(未中|没|错|空|未|miss|m|0)$/i, 0, '未中'],
+];
+
+/** 一行判定 → { id, 档, 值 }，认不出就返回 null。 */
+export function parseLine(line) {
+  const raw = line.replaceAll('\r', '').trim();
+  if (!raw || raw.startsWith('#')) return null;
+  // `| P1 | 命中 | 理由 |` 这类表格行也认（剥掉竖线再解析）。
+  // **第一版写错过**：把 `startsWith('|')` 也当成"跳过"，于是表格行全被丢掉，
+  // 一份 8 行的判定表只解析出 1 条。
+  // 三种写法都要认：P1 命中（空格分隔）、P1\t命中（制表符）、`| P1 | 命中 |`（表格）。
+  // **第一版只按 | 与制表符切**，于是最常见的 `P1 命中` 被丢掉了——8 行表只解析出 1 条。
+  const cells = raw.split(/[|\t\s]+/).map((c) => c.trim()).filter(Boolean);
+  if (cells.length < 2) return null;
+  const id = cells[0];
+  if (!/^P\d+$/i.test(id)) return null;
+  const verdict = cells[1];
+  for (const [pattern, value, label] of CORE) {
+    if (pattern.test(verdict)) return { id: id.toUpperCase(), 档: label, 值: value };
+  }
+  return null;
+}
+
+/** 整份表 → { 命中: [], 部分: [], 未中: [], 未判: [] } */
+export function parseTable(text) {
+  const 命中 = [];
+  const 部分 = [];
+  const 未中 = [];
+  const 未判 = [];
+  const seen = new Set();
+  for (const line of text.split('\n')) {
+    const parsed = parseLine(line);
+    if (!parsed) continue;
+    if (seen.has(parsed.id)) continue;      // 同一要点只判一次
+    seen.add(parsed.id);
+    if (parsed.值 === 1) 命中.push(parsed.id);
+    else if (parsed.值 === 0.5) 部分.push(parsed.id);
+    else 未中.push(parsed.id);
+  }
+  return { 命中, 部分, 未中, 未判 };
+}
+
+/** 要点表 JSON 里出现、但判定表里没提到的要点 → 记「未判」，不许当未中。 */
+export function missingVerdicts(rubric, table) {
+  if (!rubric) return [];
+  const judged = new Set([...table.命中, ...table.部分, ...table.未中]);
+  return rubric.要点.filter((p) => !judged.has(p.id)).map((p) => p.id);
+}
+
+function main() {
+  const args = process.argv.slice(2);
+  // **不能简单取"第一个不以 -- 开头的参数"**：`--s2 2` 里的 `2` 也在其中，会被当成文件名。
+  // 第一版这么写，于是 `--s2 2` 时它去读名为 "2" 的文件，读不到就静默退化成 1 条判定。
+  const takesValue = new Set(['--rubric', '--s2', '--probe']);
+  const positional = [];
+  for (let i = 0; i < args.length; i += 1) {
+    if (takesValue.has(args[i])) { i += 1; continue; }
+    if (args[i].startsWith('--')) continue;
+    positional.push(args[i]);
+  }
+  const file = positional[0];
+  if (!file) {
+    console.error('用法：node recite-from-table.mjs <判分表.md|-> [--rubric 要点表.json] [--s2 N] [--probe 0|1] [--json]');
+    process.exit(2);
+  }
+  const text = file === '-' ? fs.readFileSync(0, 'utf8') : fs.readFileSync(file, 'utf8');
+  const rubricPath = args.includes('--rubric') ? args[args.indexOf('--rubric') + 1] : null;
+  const rubric = rubricPath ? JSON.parse(fs.readFileSync(rubricPath, 'utf8')) : null;
+  const s2 = args.includes('--s2') ? Number(args[args.indexOf('--s2') + 1]) : null;
+  const probe = args.includes('--probe') ? Number(args[args.indexOf('--probe') + 1]) : null;
+
+  const table = parseTable(text);
+  const missing = missingVerdicts(rubric, table);
+
+  // 要点总数：优先用要点表，否则用判定过的条数
+  const total = rubric ? rubric.要点.length : table.命中.length + table.部分.length + table.未中.length;
+  if (total === 0) {
+    console.error('一条判定都没解析出来——检查一下判定词的写法（命中/部分/未中）。');
+    process.exitCode = 1;
+    return;
+  }
+
+  // 未判的当「未中」算 S1 是错的；但也不能不算。这里的口径：**按已判的算，并报出未判条数**。
+  const answered = table.命中.length + table.部分.length + table.未中.length;
+  const s1 = (table.命中.length + 0.5 * table.部分.length) / total;
+  const band = bootstrapS1(
+    { 要点: Array.from({ length: total }, (_, i) => ({ id: `P${i + 1}` })) },
+    { 命中: Array.from({ length: Math.round(s1 * total) }, (_, i) => `P${i + 1}`) },
+    4000,
+  );
+
+  const result = {
+    要点总数: total,
+    已判: answered,
+    未判: missing,
+    命中: table.命中.length,
+    部分: table.部分.length,
+    未中: table.未中.length,
+    S1: Number(s1.toFixed(3)),
+    S1区间: `[${band.下界}, ${band.上界}]`,
+    S2: s2,
+    迁移探针: probe,
+  };
+
+  if (missing.length > 0) {
+    result.警告 = `有 ${missing.length} 条要点没判（${missing.join('、')}）——它们被计入分母但算作未中。` +
+      '这不是"未中"，是"没判"。要么补判，要么在报分单里写明。';
+  }
+
+  if (s2 !== null && probe !== null) {
+    result.判定 = scoreRecite(
+      { 要点: Array.from({ length: total }, (_, i) => ({ id: `P${i + 1}`, 类型: '骨架', 要点: '' })) },
+      { 命中: table.命中, 部分: table.部分, 结构档: s2, 迁移探针: probe },
+    ).判定;
+  }
+
+  if (args.includes('--json')) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`要点 ${total} 条，已判 ${answered} 条：命中 ${table.命中.length}、部分 ${table.部分.length}、未中 ${table.未中.length}`);
+    if (missing.length) console.log(`⚠️ 未判 ${missing.length} 条：${missing.join('、')}`);
+    console.log(`S1 = ${result.S1}　95% 区间 ${result.S1区间}`);
+    if (result.判定) console.log(`S2 = ${s2}　探针 = ${probe}　→ ${result.判定}`);
+    console.log('\n报分单上就这么写：');
+    console.log(`  S1 命题召回 = ${result.S1}（95% 区间 ${band.下界}–${band.上界}）`);
+    if (s2 !== null) console.log(`  S2 结构档 = ${s2}／3　　迁移探针 = ${probe}`);
+  }
+}
+
+if (process.argv[1] && process.argv[1].endsWith('recite-from-table.mjs')) main();
