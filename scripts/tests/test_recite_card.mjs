@@ -141,3 +141,26 @@ test('要点表必须交代覆盖了哪几节、以及哪一节有意没覆盖',
   }
   assert.deepEqual(problems, [], problems.join('\n'));
 });
+
+test('要点条数在三处必须一致（15–20），且不许写成 8–15', () => {
+  // 「要点表多少条」这个数**写在三个地方**：协议（layered-practice）、角色规格
+  // （practice-evaluator）、骨架（背默卡.md）。第十六轮算清了 8 条不够——S1 半宽 0.31，
+  // 0.8 这条闸门线完全分辨不了。改完之后三处各写着不同的数（15–20 / 15–20 / 8–15），
+  // 是这条断言把它们拉齐的。**同一个数写在三处，不改全就是假话。**
+  const files = {
+    'layered-practice': path.join(ROOT, 'preset/skills/layered-practice/SKILL.md'),
+    'practice-evaluator': path.join(ROOT, 'preset/skills/practice-evaluator/SKILL.md'),
+    '背默卡骨架': path.join(ROOT, 'templates/closed-book/背默卡.md'),
+  };
+  const problems = [];
+  for (const [name, file] of Object.entries(files)) {
+    if (!fs.existsSync(file)) { problems.push(`${name}：文件不在`); continue; }
+    const text = fs.readFileSync(file, 'utf8');
+    const found = [...new Set([...text.matchAll(/(\d+)\s*[–-]\s*(\d+)\s*条/g)].map((m) => m[0]))];
+    if (found.length === 0) { problems.push(`${name}：没写要点条数`); continue; }
+    for (const count of found) {
+      if (!count.startsWith('15')) problems.push(`${name}：写着「${count}」，应当是 15–20（8 条不够）`);
+    }
+  }
+  assert.deepEqual(problems, [], problems.join('\n'));
+});
