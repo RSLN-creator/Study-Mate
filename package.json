@@ -67,6 +67,7 @@
     "recite:sheet": "node scripts/tools/recite-sheet.mjs",
     "sync:keys": "node scripts/tools/sync-key-common.mjs --write",
     "check:keys": "node scripts/tools/sync-key-common.mjs",
+    "sync:papers": "node scripts/tools/sync-paper-common.mjs --write",
     "gate:check": "node scripts/tools/gate-resolvability.mjs",
     "test:static": "node scripts/release/checks.mjs --static",
     "test:browser": "node scripts/release/checks.mjs --browser",
