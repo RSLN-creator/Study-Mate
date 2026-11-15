@@ -90,6 +90,18 @@ test('居中列的两条边：右边往右拖是变宽（+2d），左边往左�
     'MeasureHandle 的位移没有落到 origin 上（跟不住手）');
 });
 
+test('正文列那条线平时完全不显示；触发时只有一小段、跟着指针走', () => {
+  // 学生 2026-11-15 按截图报：「你现在这个竖线，在没有的时候应该完全不显示，按官方的来；
+  // 触发的时候才在当前位置出现那种蓝色散光。**不是整条都闪现**……一直发成一条做黑的。」
+  const measure = bodyOf('MeasureHandle');
+  assert.ok(/'data-on':/.test(measure), 'MeasureHandle 没有触发态（data-on）——那条线会一直亮着');
+  assert.ok(/onPointerMove:\s*trace/.test(measure), '那一段没有跟着指针走（学生要的「在当前位置出现」）');
+  assert.ok(/onPointerLeave[\s\S]{0,80}setAt\(null\)/.test(measure), '指针离开后那一段没有收起来');
+  assert.ok(/onBlur[\s\S]{0,60}setAt\(null\)/.test(measure), '失焦后那一段没有收起来');
+  // 组件自己只写「那一段的 top」，不许再画出通高的一条（bottom: 0 是上一版的写法）
+  assert.ok(!/bottom:\s*0/.test(measure), 'MeasureHandle 里不该再有通高的那一段（「不是整条都闪现」）');
+});
+
 test('两条把手都有可拖的真实热区与键盘可达性', () => {
   for (const name of ['PaneHandle', 'MeasureHandle']) {
     const body = bodyOf(name);

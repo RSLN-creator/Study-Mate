@@ -23,7 +23,8 @@ import { extractCss, parseTokenBlock } from './fixtures/client-css.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..', '..');
 
-const CSS = extractCss(fs.readFileSync(path.join(ROOT, 'lib', 'client.js'), 'utf8'));
+const SOURCE = fs.readFileSync(path.join(ROOT, 'lib', 'client.js'), 'utf8');
+const CSS = extractCss(SOURCE);
 const TOKENS = parseTokenBlock(CSS);
 
 /** 把 CSS 拆成一条条规则（选择器、声明体、是否在 @media 里）。与 typography 那条同一种拆法。 */
@@ -77,6 +78,19 @@ function declsOf(selector) {
 function hasDecl(selector, prop, pattern) {
   return declsOf(selector).some((one) => {
     const value = one.get(prop);
+    return value !== null && pattern.test(value);
+  });
+}
+
+/**
+ * 同上，但认**选择器列表**：`a, b, c { … }` 这种写法里 a / b / c 各算「有这一条」。
+ * 触发态那几条（指针在边上 / 聚焦 / 正在拖）是同一份声明，写在一条列表里最省事——
+ * 那时候用 hasDecl 会读不出来（它按整条选择器文本比）。
+ */
+function hasDeclInList(selector, prop, pattern) {
+  return RULES.some((rule) => {
+    if (!rule.selector.split(',').map((one) => one.trim()).includes(selector)) return false;
+    const value = decl(rule, prop);
     return value !== null && pattern.test(value);
   });
 }
@@ -152,19 +166,37 @@ test('进度条占满整列：不许再有自加的测宽上限', () => {
   assert.deepEqual(goalCaps, [], `.smb-subhead__goal 不许写 max-width：${goalCaps.join('、')}`);
 });
 
-test('两条抓手都在、都能拖、静止态都看得见', () => {
+test('两条抓手都在、都能拖；栏抓手静止态看得见，正文列那条**平时完全不显示**', () => {
   for (const selector of ['.smb-panehandle', '.smb-measurehandle']) {
     assert.ok(hasDecl(selector, 'cursor', /col-resize/), `${selector} 没有 col-resize`);
   }
-  // 静止态可见：看得见的是「抓手那一段」，不是通高热区。栏那一段就是 > i 自己；
-  // 正文列那条改成「通高细线（> i，那是**边**）+ 一段短抓手（> i::after，那是**这里能拖**）」，
-  // 所以正文列取的是 ::after。两族各取自己那一段来判底色与尺寸。
-  for (const selector of ['.smb-panehandle > i', '.smb-measurehandle > i::after']) {
-    assert.ok(hasDecl(selector, 'background', /var\(--smb-line-strong\)/), `${selector} 静止态没有底色`);
-    const heights = declsOf(selector).map((one) => one.get('height')).filter(Boolean);
-    assert.ok(heights.some((one) => /^([\d.]+)px$/.test(one) && Number(one.replace('px', '')) >= 32),
-      `${selector} 静止态太短（要 ≥32px 才看得见）：${heights.join('/')}`);
+  // 左右两栏：静止态**就要看得见**（学生报过「没看到拖动条」）——那一段有底色、有尺寸。
+  assert.ok(hasDecl('.smb-panehandle > i', 'background', /var\(--smb-line-strong\)/), '.smb-panehandle > i 静止态没有底色');
+  const heights = declsOf('.smb-panehandle > i').map((one) => one.get('height')).filter(Boolean);
+  assert.ok(heights.some((one) => /^([\d.]+)px$/.test(one) && Number(one.replace('px', '')) >= 32),
+    `.smb-panehandle > i 静止态太短（要 ≥32px 才看得见）：${heights.join('/')}`);
+  // 正文列那条按**官方 WidthHandle 的口径**：平时 opacity: 0（学生 2026-11-15 按截图报
+  // 「在没有的时候应该完全不显示，按官方的来……一直发成一条做黑的」），触发时才亮一小段。
+  const rest = declsOf('.smb-measurehandle > i').map((one) => one.get('opacity')).filter(Boolean);
+  assert.deepEqual(rest, ['0'], `正文列那条线平时必须完全不显示：${rest.join('/')}`);
+  assert.ok(hasDecl('.smb-measurehandle > i', 'pointer-events', /none/),
+    '.smb-measurehandle > i 要吃指针事件的话，那一段会挡住自己的热区');
+  // 亮起来的是**一小段**：品牌色 + 一圈散光（学生要的「蓝色散光」），不是整条通高的线。
+  assert.ok(hasDecl('.smb-measurehandle > i::after', 'background', /var\(--smb-brand\)/),
+    '正文列那一段要取品牌色（学生说的蓝色散光）');
+  assert.ok(hasDecl('.smb-measurehandle > i::after', 'box-shadow', /color-mix/),
+    '正文列那一段要有一圈散光（box-shadow）');
+  const segment = declsOf('.smb-measurehandle > i').map((one) => one.get('height')).filter(Boolean);
+  assert.ok(segment.every((one) => /^([\d.]+)px$/.test(one) && Number(one.replace('px', '')) <= 64),
+    `闪出来的必须是**一小段**（不是整条通高）：${segment.join('/')}`);
+  // 触发态：指针在边上 / 聚焦 / 正在拖（同一份声明，写在一条选择器列表里）
+  for (const on of ['[data-on="1"]', ':focus-visible', '[data-dragging="1"]']) {
+    assert.ok(hasDeclInList(`.smb-measurehandle${on} > i`, 'opacity', /^1$/),
+      `.smb-measurehandle${on} > i 没亮起来（触发时应当出现）`);
   }
+  // 那一段跟着指针走（写内联 top），不是钉在文档中间
+  assert.ok(/setAt\(/.test(SOURCE) && /'data-on':/.test(SOURCE),
+    '正文列抓手没有「跟着指针走的那一段」（学生要的「在当前位置出现」）');
 });
 
 test('正文列左右两条边各一个抓手，且都不许探出正文列一格', () => {
@@ -187,13 +219,40 @@ test('正文列左右两条边各一个抓手，且都不许探出正文列一�
   assert.deepEqual(bad, [], `正文列抓手不许探出正文列：\n  ${bad.join('\n  ')}`);
 });
 
-test('左栏四个面板竖着排（横排会把右边那几项的名字压窄）', () => {
-  // 学生 2026-11-15：「节点 术语 目录 科目 变为一竖列」——横排那一条他先前就否过。
-  assert.ok(hasDecl('.smb-left__tabs', 'flex-direction', /^column$/), '.smb-left__tabs 不是竖排');
-  assert.ok(hasDecl('.smb-left__tabs .smb-rtab', 'width', /100%/), '竖排的每一项要占满整栏宽');
-  assert.ok(hasDecl('.smb-left__tabs .smb-rtab', 'border-bottom', /^0$/), '竖排里那条下划线标记要关掉');
-  assert.ok(hasDecl('.smb-left__tabs .smb-rtab[aria-current="true"]', 'border-left-color', /var\(--smb-brand\)/),
-    '竖排的选中态要有一条左侧竖标');
+test('左栏四个面板挂在左侧窄轨上、名字竖排；正文里那块 tab 条已经删掉', () => {
+  // 学生 2026-11-15：「是让你放左边红框那里！！中间那个删除！！」——红框是窄轨，
+  // 「中间那个」是窄轨旁边那块 tab 条。
+  assert.ok(!/smb-left__tabs/.test(SOURCE), '窄轨旁边那块 tab 条必须删掉（学生点名删的就是它）');
+  assert.ok(/LEFT_PANELS/.test(SOURCE), '四个面板的清单没了（窄轨上那四个名字由它出）');
+  for (const name of ['节点', '术语', '目录', '科目']) {
+    assert.ok(SOURCE.indexOf("'span.smb-rail__label', null, one") >= 0
+      || new RegExp(`'${name}'`).test(SOURCE), `窄轨上少了「${name}」这一项`);
+  }
+  assert.ok(/h\('button\.smb-rail'/.test(SOURCE) && /data-proto': 'left-panel'/.test(SOURCE),
+    '窄轨上的按钮没有按面板渲染（data-proto=left-panel）');
+  // 名字竖排：与右栏「题目 / 问答」共用同一条
+  assert.ok(hasDecl('.smb-rail__label', 'writing-mode', /vertical/), '.smb-rail__label 没有竖排');
+});
+
+test('行间距与分割线各只有一个定义：主页与科目面板共用同一套', () => {
+  // 学生 2026-11-15：「你别的行间隔 + UI 还是没有对齐原来的科目面板！」、
+  // 「我需要主页 + 科目面板都有分割线，然后改一处就是全局改」。
+  const recipe = RULES.filter((rule) => rule.selector.split(',').some((one) => one.trim() === '.smb-subjmenu__item')
+    && /padding/.test(rule.body));
+  assert.equal(recipe.length, 1, `「一行一条」的配方必须只有一个定义，现在有 ${recipe.length} 条`);
+  for (const one of ['.smb-node', '.smb-course', '.smb-row']) {
+    assert.ok(recipe[0].selector.includes(one), `${one} 没有挂在那条共享配方上（行间距会各自漂）`);
+  }
+  // 分割线：只有 .smb-rows 那一条规则出声明的 border-top
+  const dividers = RULES.filter((rule) => rule.selector.includes('.smb-rows')
+    && decl(rule, 'border-top') !== null);
+  assert.equal(dividers.length, 1, `分割线只许有一个定义，现在有 ${dividers.length} 条`);
+  // 落点：主页的科目列表、浮层科目面板、左栏的科目面板都挂了 .smb-rows
+  const hits = (SOURCE.match(/smb-rows/g) || []).length;
+  assert.ok(hits >= 4, `.smb-rows 的落点太少（主页 + 两处科目面板），现在只有 ${hits} 处`);
+  // 主页那一行不再是自带边框的卡片：分割线才是它的分界（否则线看不出来）
+  const borders = declsOf('.smb-course').map((one) => one.get('border')).filter(Boolean);
+  assert.deepEqual(borders, [], `主页的科目行不该再有自己的边框（分割线才是分界）：${borders.join('/')}`);
 });
 
 /* ── §十 A：三处滚动区的标题吸顶 ────────────────────────────────────────── */
