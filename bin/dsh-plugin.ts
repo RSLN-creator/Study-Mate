@@ -253,6 +253,11 @@ export async function apply(ctx: PluginContext): Promise<void> {
   // 这里同样只挂一行（与上面那条同一种姿势）。
   import('../lib/progress-route.ts').then((module) => module.registerProgressRoutes(ctx), (error) => { console.warn(`StudyMate：读完进度路由没挂上。${error instanceof Error ? error.message : String(error)}`); });
 
+  // 打开资料（学生 2026-11-15）：POST /api/studymate/open —— 阅读端把参考资料里的
+  // `.xlsx`/`.pdf` 这类浏览器读不出的文件交给系统（默认应用打开 / 在文件管理器里定位）。
+  // 这是本插件唯一一条**会启动进程**的路由，路径围栏写在 lib/open-route.ts 里。
+  import('../lib/open-route.ts').then((module) => module.registerOpenRoutes(ctx), (error) => { console.warn(`StudyMate：打开资料路由没挂上。${error instanceof Error ? error.message : String(error)}`); });
+
   // 实验代跑（#77）：学生按「跑一次」→ POST /api/studymate/lab-run。计划与执行与原生工具
   // studymate_lab_run 共用一份实现，这里也只挂一行。
   import('../lib/lab/route.ts').then((module) => module.registerLabRoute(ctx), (error) => { console.warn(`StudyMate：实验代跑路由没挂上。${error instanceof Error ? error.message : String(error)}`); });
