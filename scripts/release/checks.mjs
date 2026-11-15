@@ -447,7 +447,10 @@ const groups = {
       // 的连贯空缺率全部落在 31–60%，写死绝对阈值等于没分辨力。这条套件只钉「它报得对不对」，
       // 每条判据都有正例不报、反例必报的一对样例（实测抓到过三处：二元组饱和、名词连缀误报、
       // 把「决定」当拟物动词）。
-      'scripts/tests/test_lesson_readability.mjs',      'scripts/tests/test_closed_book_template.mjs',
+      'scripts/tests/test_lesson_readability.mjs',      // 闭卷卷子的**配分算术**：小问加起来必须等于大题满分。配分是量具的一部分，
+      // 错一分两次分数就不可比，而错法（小问多一分少一分）肉眼看不出来。
+      // 它还审工作区里的真卷子——CI 上没有工作区就跳过，不当失败。
+      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',
