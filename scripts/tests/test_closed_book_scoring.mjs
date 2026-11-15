@@ -141,6 +141,46 @@ test('工作区里如果有真卷子，也一起审（没有就跳过）', (t) =
   assert.deepEqual(problems, [], `工作区里的判分键配分对不上：\n${problems.join('\n')}`);
 });
 
+test('真卷子的题号与骨架一一对应（骨架真的能照着出题）', (t) => {
+  // 这一条回答一个平时没人问的问题：**这个骨架到底能不能出题**？
+  // 判据是「真卷子的题号必须与骨架的题号一一对应」——如果照抄骨架出卷，题号会原样
+  // 传下去；如果某份真卷子多一题、少一题、或改了题号，说明骨架与实际用法已经漂了。
+  //
+  // 题号不是硬约束（出卷人可以合并两题），但**漂了就得知道**：这条报出来是提醒的形式——
+  // 它断言的是「至少有一份真卷子与骨架题号完全对应」，否则说明骨架从没被真正用过。
+  const questionNumbers = (text) => [...text.matchAll(/^\*\*(\d+)\.\*\*/gm)].map((m) => Number(m[1]));
+  const skeleton = questionNumbers(key);
+  assert.ok(skeleton.length >= 10, `骨架的题太少（${skeleton.length}），不像一份 30 分钟的卷子`);
+
+  const workspace = process.env.LEARN_WORKSPACE
+    || path.join(process.env.USERPROFILE || process.env.HOME || '', 'Documents', '学习', '.learning');
+  if (!fs.existsSync(workspace)) {
+    t.skip('本机没有学习工作区');
+    return;
+  }
+  const keys = [];
+  for (const subject of fs.readdirSync(path.join(workspace, 'subjects'), { withFileTypes: true })) {
+    if (!subject.isDirectory()) continue;
+    const dir = path.join(workspace, 'subjects', subject.name, 'assessments');
+    if (!fs.existsSync(dir)) continue;
+    for (const file of fs.readdirSync(dir)) {
+      if (!file.includes('判分键')) continue;
+      keys.push(fs.readFileSync(path.join(dir, file), 'utf8').replaceAll('\r\n', '\n'));
+    }
+  }
+  if (keys.length === 0) {
+    t.skip('工作区里还没有判分键');
+    return;
+  }
+  const matching = keys.filter((text) => {
+    const numbers = questionNumbers(text);
+    return numbers.length === skeleton.length && numbers.every((n, i) => n === skeleton[i]);
+  });
+  assert.ok(matching.length >= 1,
+    `没有任何一份真卷子的题号与骨架对应（骨架 ${skeleton.length} 题：${skeleton.join(',')}）——` +
+    '说明骨架从没被照着用过，或者用的时候悄悄改了结构');
+});
+
 test('每一份卷子都有配对的判分键，且卷里没有残留的占位符', (t) => {
   // 两条都是出卷的硬要求，而且都是**看盘就能查、却最容易漏**的：
   //   · 卷与键必须成对——只有卷没有键，学生的答案没法判；只有键没有卷，那是白写的。
