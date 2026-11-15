@@ -103,7 +103,7 @@ test('判分键里那张分辨率表必须与脚本现算一致', () => {
 
   const rubricOf2 = (n) => ({ 要点: Array.from({ length: n }, (_, i) => ({ id: `P${i + 1}`, 类型: '骨架', 要点: 'x' })) });
   const mismatches = [];
-  for (const n of [8, 10, 15, 20]) {
+  for (const n of [8, 10, 15, 18, 20]) {
     const r = rubricOf2(n);
     const hits = Math.floor(n * 0.8);                    // S1 ≈ 0.80 那一档
     const band = bootstrapS1(r, { 命中: r.要点.slice(0, hits).map((p) => p.id) });

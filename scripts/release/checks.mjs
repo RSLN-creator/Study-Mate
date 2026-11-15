@@ -463,7 +463,10 @@ const groups = {
       // 三条闸门缺一不算通过、「字面搬运」S2=0 时 S1 再高也不过。**还有一条最要紧的**：
       // 10 条要点、S1=0.8 时 bootstrap 半宽是 0.25——0.8 这条闸门线根本分辨不了 0.65 与 0.95。
       // 判分键里那张「要点数 → 半宽」的表由这条套件现算比对，写错会红。
-      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
+      // 背默卡的**要点表**必须与课件对得上（`test_recite_card.mjs`）：数量 ≥15、三类齐、
+      // 每条是可判真假的断言、关键数字按完整边界匹配课件原文。最后一条是真踩到的——
+      // 编造的「4.2 nA」曾被判成"在课件里"，因为它命中了「74.2 mm」与「4.21°」。
+      'scripts/tests/test_recite_card.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',
