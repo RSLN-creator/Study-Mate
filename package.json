@@ -61,6 +61,7 @@
     "test:installer": "node --test scripts/tests/test_installer.mjs scripts/tests/test_bundle.mjs",
     "style:lesson": "node scripts/tools/lesson-style-check.mjs",
     "readability": "node scripts/tools/lesson-readability.mjs",
+    "raters": "node scripts/tools/rater-agreement.mjs",
     "test:static": "node scripts/release/checks.mjs --static",
     "test:browser": "node scripts/release/checks.mjs --browser",
     "guard:export": "node scripts/release/export_guard.mjs",

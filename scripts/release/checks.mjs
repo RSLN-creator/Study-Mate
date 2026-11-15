@@ -450,7 +450,11 @@ const groups = {
       'scripts/tests/test_lesson_readability.mjs',      // 闭卷卷子的**配分算术**：小问加起来必须等于大题满分。配分是量具的一部分，
       // 错一分两次分数就不可比，而错法（小问多一分少一分）肉眼看不出来。
       // 它还审工作区里的真卷子——CI 上没有工作区就跳过，不当失败。
-      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
+      // 评分者一致性（`scripts/tools/rater-agreement.mjs`）：ICC(2,k) 与 Krippendorff α。
+      // 这是「判分键能不能用」的唯一凭据。第一版 ICC 漏了一步归一，跑出 49.5（ICC 不可能
+      // 大于 1）——一个越界但"看起来像个数"的值比报错危险得多，所以工具现在越界就拒绝给值，
+      // 这条套件钉住这一点。
+      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',

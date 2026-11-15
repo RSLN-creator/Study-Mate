@@ -123,6 +123,48 @@ test('节拍表在卷子里，且明说「不是复习排期」', () => {
     '要说清系统不做排期器——否则读的人会以为有东西在跟踪');
   assert.match(paper, /目标态规格/, '越界与否的判据挂在哪份文档上，要写出来');
 });
+test('判分键里不许「一格两事」：每个得分点只判一件事', () => {
+  // 2026-11-15 的判可评性实测（第八轮）暴露的头号缺陷：一个得分格里塞了两件事，
+  // 三个人各按自己的读法判，每题抖 1.5 分；而判定带只有 22 分隔、半宽却有 15 分，
+  // **几次抖动叠加就足以跨带**（实测：同一份答卷，一人判「通过」，两人判「部分通过」）。
+  //
+  // 判据：所有「(a) N 分」「(b) N 分」这类小问格里，**不许同时出现两个"要"**——
+  // 具体抓两种写法：① 「X。Y。」两句都是得分要求却共用一格；② 括注里写「任答两种，每种…」
+  // 却把「必须先排掉」夹在同一条目内。
+  //
+  // 这条撤不掉：它守的是「分数可比」这个前提。判分键一格两事，量具就不可比。
+  const key = read('判分键.md');
+  // 骨架允许用「各 1.5 分」「各 1 分」这类**显式拆分**——那种写法把两件事分开了，不算违规。
+  const explicitSplit = /各\s*[\d.]+\s*分|分别\s*[\d.]+\s*分|\+\s*[\d.]+\s*分/;
+  const offenders = [];
+  for (const match of key.matchAll(/^- \(([a-d])\)\s*(?:（)?([\d.]+)\s*分([^\n]*)\n((?:  .*\n)*)/gm)) {
+    const body = match[0];
+    if (explicitSplit.test(body)) continue;
+    // 一个格子里出现两个「分」= 两个得分点，且没显式拆
+    const scoreMarks = [...body.matchAll(/[\d.]+\s*分/g)].length;
+    if (scoreMarks >= 2) offenders.push(body.split('\n')[0].trim().slice(0, 60));
+  }
+  assert.deepEqual(offenders, [],
+    '这些得分格里出现了两个配分却没写「各 N 分」——一格两事会让评分者各判各的：\n' + offenders.join('\n'));
+
+  // **反证**：这一条必须真报得出来。构造一个「一格两事」的判分键，判据要抓到它。
+  // 没有这段反证，「不许一格两事」就只是一句永远通过的声明。
+  const broken = [
+    '## 二、因果（9 分）',
+    '',
+    '**4.**（9 分）',
+    '- (a) 3 分：<得分点一>。3 分：<得分点二>，只写前一半给 1.5 分。',
+    '',
+  ].join('\n');
+  const caught = [];
+  for (const match of broken.matchAll(/^- \(([a-d])\)\s*(?:（)?([\d.]+)\s*分([^\n]*)\n((?:  .*\n)*)/gm)) {
+    const body = match[0];
+    if (explicitSplit.test(body)) continue;
+    if ([...body.matchAll(/[\d.]+\s*分/g)].length >= 2) caught.push(body.trim().slice(0, 40));
+  }
+  assert.equal(caught.length, 1, '故意写的一格两事必须被这条判据抓到');
+});
+
 test('lab 骨架没被这一份影响（两套骨架互不污染）', () => {
   const lab = path.join(ROOT, 'templates', 'lab');
   assert.ok(fs.existsSync(path.join(lab, '0000-示例', 'check.sh')), 'lab 骨架的判分入口还在');
