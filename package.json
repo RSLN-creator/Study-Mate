@@ -65,6 +65,7 @@
     "recite": "node scripts/tools/recite-score.mjs",
     "recite:table": "node scripts/tools/recite-from-table.mjs",
     "recite:sheet": "node scripts/tools/recite-sheet.mjs",
+    "questions:check": "node scripts/tools/question-answerable.mjs --all",
     "sync:keys": "node scripts/tools/sync-key-common.mjs --write",
     "check:keys": "node scripts/tools/sync-key-common.mjs",
     "sync:papers": "node scripts/tools/sync-paper-common.mjs --write",

@@ -509,7 +509,12 @@ const groups = {
       // （卷子 / 判分键 / 背默卡 / 检验记录 / 锚点数据集 / 五套工具）在 `docs/使用/使用说明.md`
       // 里**一个字都没有提到**。一个学生读完使用说明，不会知道「考考我」存在。
       // **没有使用说明，等于没做。**
-      'scripts/tests/test_usage_guide.mjs',      'scripts/tests/test_recite_pipeline_e2e.mjs',      'scripts/tests/test_recite_sheet.mjs',      'scripts/tests/test_recite_from_table.mjs',      'scripts/tests/test_inspection_record.mjs',      'scripts/tests/test_pending_beats.mjs',      'scripts/tests/test_citation_provenance.mjs',      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
+      // **题目可答性**（`question-answerable.mjs`）：卷子上每道题问的数字与概念，课件里有没有？
+      // 如果一道题问的东西课件里根本没有，**学生答不出来不是他的问题，是出题的问题**——
+      // 而这种题最坑：它看起来完全正常，学生只会以为自己没读懂。
+      // 工具写的时候犯了六类误报（子串匹配、迁移题新参数、题面自给常数、粗体指令、粗体题号、
+      // 术语差一个字），每一类都钉在 `test_question_answerable` 里——**误报一多判据就没人看了**。
+      'scripts/tests/test_question_answerable.mjs',      'scripts/tests/test_usage_guide.mjs',      'scripts/tests/test_recite_pipeline_e2e.mjs',      'scripts/tests/test_recite_sheet.mjs',      'scripts/tests/test_recite_from_table.mjs',      'scripts/tests/test_inspection_record.mjs',      'scripts/tests/test_pending_beats.mjs',      'scripts/tests/test_citation_provenance.mjs',      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',
