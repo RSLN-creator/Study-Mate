@@ -813,7 +813,7 @@ try {
         !!cap && cap.tag === 'p' && !/^图\s*\d/.test(cap.text), JSON.stringify(cap));
       check(`${tag} 解释槽走正文那一档字号（${cap && cap.size}px / 行高 ${cap && cap.line}）`,
         !!cap && cap.size === one.bodyTokens.fontSize
-        && Math.abs(cap.line / cap.size - Number(one.bodyTokens.line)) < 0.01,
+        && Math.abs(cap.line - one.bodyTokens.lineHeight) < 0.5,
         JSON.stringify({ cap: cap && [cap.size, cap.line], body: one.bodyTokens }));
       check(`${tag} 解释槽里的行内 code 真的排出来了（${cap && cap.inlineCode} 处）`,
         !!cap && cap.inlineCode === 2, JSON.stringify(cap));
@@ -839,10 +839,10 @@ try {
         missing.length === 0, missing.map((row) => row.label).join('、'));
       const sizes = [...new Set(one.prose.map((row) => row.size))];
       check(`${tag} 一屏里成句的文字只有一种字号（${sizes.join('/')}px）`, sizes.length === 1, JSON.stringify(one.prose));
-      const ratios = [...new Set(one.prose.map((row) => row.ratio))];
-      check(`${tag} 行高跟着字号走（正文那一档 ${one.bodyTokens.line}，实测比值 ${ratios.join('/')}）`,
-        ratios.length === 1 && Math.abs(ratios[0] - Number(one.bodyTokens.line)) < 0.01,
-        JSON.stringify({ ratios, token: one.bodyTokens }));
+      const lineAbs = [...new Set(one.prose.map((row) => Math.round(row.ratio * row.size * 100) / 100))];
+      check(`${tag} 行高跟着字号走（正文那一档实测 ${one.bodyTokens.lineHeight}px，取样点 ${lineAbs.join('/')}px）`,
+        lineAbs.length === 1 && Math.abs(lineAbs[0] - one.bodyTokens.lineHeight) < 0.5,
+        JSON.stringify({ lineAbs, token: one.bodyTokens }));
       check(`${tag} 正文那一档字号就是 token 的值（${one.bodyTokens.size} = ${one.bodyTokens.fontSize}px）`,
         Number(one.bodyTokens.size.replace('px', '')) === one.bodyTokens.fontSize, JSON.stringify(one.bodyTokens));
 

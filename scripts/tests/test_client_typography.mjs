@@ -9,8 +9,10 @@
    所以判据写在这里，而不是靠人看截图。
 
    口径（别顺手放宽）：
-     · 阶梯**成对**：一个 --smb-fs-x 必须有一个同名的 --smb-lh-x，且行高必须是**无单位数**。
-       写成 px 的话，子元素换了字号还继承父元素那个 px 高度，配对当场断掉。
+     · 阶梯**成对**：一个 --smb-fs-x 必须有一个同名的 --smb-lh-x，且行高必须落在**官方那一套**上：
+       正文那一档引 `--dsh-content-font-delta`（绝对 px），其余档是绝对 px。
+       （旧断言断的是「行高必须是无单位数」，理由是「px 行高会把配对断在继承上」——规范 §九
+        把这层改成「取官方量」之后两者体系相反，那条已退役，见下面那条测试的注释。）
      · 正文只有一档：字号**字面值**只允许出现在元信息档（≤ 12px 的角标、chip、图注、
        控件文字）。一旦出现 12.5px/13px 这种字面值，同一屏里就又可能有两种正文字号。
      · 正文那一批选择器（正文列 + 右栏题目文本）必须引 --smb-fs-body，行高引它的配对。
@@ -110,15 +112,23 @@ test('字号与行高成对：每个 --smb-fs-* 都有一个同名的 --smb-lh-*
   assert.deepEqual(orphanLines, [], `这些行高没有配对的字号：${orphanLines.join('、')}`);
 });
 
-test('行高是无单位数（px 行高会把配对断在继承上）', () => {
+test('行高取官方那一套：正文引 --dsh-content-font-delta，其余是绝对 px', () => {
+  // 退役（2026-11，与规范 §九「字号与视觉量必须取官方」同批）：这条原来断的是
+  // 「行高必须是无单位数」，理由是「写成 px 的话，子元素换了字号还继承父元素那个 px 高度，
+  // 配对当场断掉」。改成取官方量之后，官方正文的行高就是**绝对 px**
+  // （`calc(24px + var(--dsh-content-font-delta, 0px))`），固定阶梯那八档也一样是绝对 px——
+  // 两个体系相反，旧断言到此退役。**不是放宽**：新判据把「自造比例」这一类关掉了，
+  // 而它原来只是「任何无单位数都行」。
   const bad = [];
   for (const name of TOKENS.keys()) {
     if (!name.startsWith('--smb-lh-')) continue;
-    const value = TOKENS.get(name).fallback;
-    if (!/^\d+(\.\d+)?$/.test(String(value))) bad.push(`${name}: ${value}`);
+    const value = String(TOKENS.get(name).fallback ?? '').trim();
+    const absolute = /^\d+(\.\d+)?px$/.test(value);
+    const officialDelta = /^calc\(/.test(value) && value.includes('--dsh-content-font-delta');
+    if (!absolute && !officialDelta) bad.push(`${name}: ${value}`);
   }
   assert.deepEqual(bad, [],
-    `行高要写成无单位数（乘在字号上），别写 px：\n  ${bad.join('\n  ')}`);
+    `行高要取官方那一套（绝对 px；正文那一档引 --dsh-content-font-delta）：\n  ${bad.join('\n  ')}`);
 });
 
 test('字号字面值只出现在元信息档：正文那一档必须引 token', () => {
