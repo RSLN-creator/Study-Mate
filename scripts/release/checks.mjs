@@ -488,7 +488,11 @@ const groups = {
       // 与 B6（延迟反馈）的证据互相打架、且都没自己核过原文，所以没落。
       // 这条套件守住：待定的必须标「证据打架」、已落的四拍必须在规范里、
       // 待定的不许被写成可执行规则。
-      'scripts/tests/test_pending_beats.mjs',      'scripts/tests/test_citation_provenance.mjs',      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
+      // **报分必须带的东西，一件都不许省**（`test_inspection_record.mjs`）：报分的规矩散在
+      // `layered-practice` 的七八处（带区间、三条局限、判定带只是报告用语、剖面比总分稳、
+      // 拿不准的题要写出来），**之前没有一份成品把它们一次落全**。
+      // 学生答完题最可能发生的事就是：评分者只报一个总分——而那个总分的半宽是 6–19 分。
+      'scripts/tests/test_inspection_record.mjs',      'scripts/tests/test_pending_beats.mjs',      'scripts/tests/test_citation_provenance.mjs',      'scripts/tests/test_gate_resolvability.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',

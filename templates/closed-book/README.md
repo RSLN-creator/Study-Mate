@@ -9,6 +9,7 @@
 | `卷子.md` | 学生要做闭卷检验时，照抄后只换题目 | `<subject_path>/assessments/<NNNN>-<节点id>-卷子.md` |
 | `判分键.md` | 与卷子**同时**写好、**同时**落盘 | `<subject_path>/assessments/<NNNN>-<节点id>-判分键.md` |
 | `背默卡.md` | 学生要验「合上原文还能写出什么」时，照抄后填要点表 | `<subject_path>/assessments/<NNNN>-<节点id>-背默卡.md` |
+| `检验记录.md` | 判完分填这一份（三条必填局限 + 最弱剖面 + 拿不准的题） | `<subject_path>/assessments/<NNNN>-<节点id>-检验记录-<日期>.md` |
 | `判分锚点数据集.md` | **不用抄**——它是方法层的公共资产，评分者判不准时去查；新科目不需要复制一份 | 仓库内一份，不落工作区 |
 
 ## 三条硬规矩
