@@ -470,7 +470,10 @@ const groups = {
       // 2026-11-15 我自己差点泄了：为了让卷子一键能打开，把卷子/判分键/背默卡一起拷进了
       // `reference/`——阅读端会把它们列进「参考资料」，学生打开就看见答案。
       // `assessments/` 阅读端不认识，那正是判分键唯一的防线。
-      'scripts/tests/test_no_answer_leak.mjs',      'scripts/tests/test_recite_card.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
+      // 判分键的**共用段落**必须与骨架一致（`scripts/tools/sync-key-common.mjs --check`）：
+      // 背默卡计分那一整节在骨架里只有一处定义。前十四轮我改过骨架三次，**每一次真判分键
+      // 都停在旧内容上**——模板对了、成品没跟上，等于没改。
+      'scripts/tests/test_key_common_sync.mjs',      'scripts/tests/test_no_answer_leak.mjs',      'scripts/tests/test_recite_card.mjs',      'scripts/tests/test_recite_score.mjs',      'scripts/tests/test_methods_index.mjs',      'scripts/tests/test_rater_agreement.mjs',      'scripts/tests/test_closed_book_scoring.mjs',      'scripts/tests/test_closed_book_template.mjs',
       'scripts/tests/test_skill_frontmatter.mjs',
       'scripts/tests/test_statuses.mjs',
       'scripts/tests/test_release_metadata.mjs',

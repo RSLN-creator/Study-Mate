@@ -63,6 +63,8 @@
     "readability": "node scripts/tools/lesson-readability.mjs",
     "raters": "node scripts/tools/rater-agreement.mjs",
     "recite": "node scripts/tools/recite-score.mjs",
+    "sync:keys": "node scripts/tools/sync-key-common.mjs --write",
+    "check:keys": "node scripts/tools/sync-key-common.mjs",
     "test:static": "node scripts/release/checks.mjs --static",
     "test:browser": "node scripts/release/checks.mjs --browser",
     "guard:export": "node scripts/release/export_guard.mjs",

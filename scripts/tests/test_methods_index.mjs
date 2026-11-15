@@ -59,3 +59,37 @@ test('索引里点名的仓库路径都真的在盘上', () => {
 test('实算的三种答卷都还在（SCENARIOS 没被清空）', () => {
   assert.ok(SCENARIOS.length >= 3, 'bootstrap 脚本里的答卷场景少于 3 种，半宽就不再是从多种答卷上取的');
 });
+
+test('真判分键里的半宽数字也必须与脚本现算一致（不只是骨架）', async (t) => {
+  // 骨架改过三次半宽（±8 → 14–19 → 6–19），**每一次真判分键都停在旧数字上**。
+  // 骨架是模板，成品是学生真正看到的那份——模板对了、成品没跟上，等于没改。
+  const { SCENARIOS, bootstrapTotal, pointsOf } = await import('../tools/closed-book-bootstrap.mjs');
+  const widest = Math.ceil(Math.max(...SCENARIOS.map((s) => bootstrapTotal(pointsOf(s.spec)).半宽)));
+  const narrowest = Math.floor(Math.min(...SCENARIOS.map((s) => bootstrapTotal(pointsOf(s.spec)).半宽)));
+
+  const workspace = process.env.LEARN_WORKSPACE
+    || path.join(process.env.USERPROFILE || process.env.HOME || '', 'Documents', '学习', '.learning');
+  const subjects = path.join(workspace, 'subjects');
+  if (!fs.existsSync(subjects)) { t.skip('没有学习工作区'); return; }
+
+  const problems = [];
+  let keys = 0;
+  for (const subject of fs.readdirSync(subjects, { withFileTypes: true })) {
+    if (!subject.isDirectory()) continue;
+    const dir = path.join(subjects, subject.name, 'assessments');
+    if (!fs.existsSync(dir)) continue;
+    for (const file of fs.readdirSync(dir)) {
+      if (!file.includes('判分键') || !file.endsWith('.md')) continue;
+      keys += 1;
+      const text = fs.readFileSync(path.join(dir, file), 'utf8');
+      for (const match of text.matchAll(/半宽\s*(\d+)[–-](\d+)\s*分/g)) {
+        const [lo, hi] = [Number(match[1]), Number(match[2])];
+        if (lo !== narrowest || hi !== widest) {
+          problems.push(`${subject.name}/${file}：写着「半宽 ${lo}–${hi} 分」，现算是 ${narrowest}–${widest} 分`);
+        }
+      }
+    }
+  }
+  if (keys === 0) { t.skip('工作区里还没有判分键'); return; }
+  assert.deepEqual(problems, [], `判分键里的半宽数字与脚本对不上：\n${problems.join('\n')}`);
+});
