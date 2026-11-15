@@ -140,3 +140,40 @@ test('工作区里如果有真卷子，也一起审（没有就跳过）', (t) =
   }
   assert.deepEqual(problems, [], `工作区里的判分键配分对不上：\n${problems.join('\n')}`);
 });
+
+test('每一份卷子都有配对的判分键，且卷里没有残留的占位符', (t) => {
+  // 两条都是出卷的硬要求，而且都是**看盘就能查、却最容易漏**的：
+  //   · 卷与键必须成对——只有卷没有键，学生的答案没法判；只有键没有卷，那是白写的。
+  //   · 骨架里那些 `<节点标题>` `<分>` 占位符，替换漏一个，学生就会看到「（<分> 分）」。
+  const workspace = process.env.LEARN_WORKSPACE
+    || path.join(process.env.USERPROFILE || process.env.HOME || '', 'Documents', '学习', '.learning');
+  if (!fs.existsSync(workspace)) {
+    t.skip('本机没有学习工作区');
+    return;
+  }
+  const problems = [];
+  let papers = 0;
+  for (const subject of fs.readdirSync(path.join(workspace, 'subjects'), { withFileTypes: true })) {
+    if (!subject.isDirectory()) continue;
+    const dir = path.join(workspace, 'subjects', subject.name, 'assessments');
+    if (!fs.existsSync(dir)) continue;
+    for (const file of fs.readdirSync(dir)) {
+      if (!file.endsWith('-卷子.md')) continue;
+      papers += 1;
+      const stem = file.replace(/-卷子\.md$/, '');
+      if (!fs.existsSync(path.join(dir, `${stem}-判分键.md`))) {
+        problems.push(`${subject.name}/${file} 没有配对的判分键`);
+      }
+      const text = fs.readFileSync(path.join(dir, file), 'utf8');
+      const leftovers = [...text.matchAll(/<[^>\n]{1,20}>/g)].map((m) => m[0]);
+      if (leftovers.length > 0) {
+        problems.push(`${subject.name}/${file} 里还有占位符：${[...new Set(leftovers)].join('、')}`);
+      }
+    }
+  }
+  if (papers === 0) {
+    t.skip('工作区里还没有卷子');
+    return;
+  }
+  assert.deepEqual(problems, [], `卷子有问题：\n${problems.join('\n')}`);
+});
