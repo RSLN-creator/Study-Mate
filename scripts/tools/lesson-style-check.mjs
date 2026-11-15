@@ -76,7 +76,17 @@ function firstProseParagraph(section) {
 }
 
 /* ── 判据 2：末段有没有回收起笔 ──────────────────────────────────────── */
-const BACKREFERENCE = /(回到|开头|本节一开始|上面那个|前面那个|一开始那个|最初|起先|第一段|这个问题|那个疑问|所以.{0,6}多|这就是为什么)/;
+/* 回指不一定要出现「回到开头」这种字眼。实测撞到的两种合规写法：
+ *   · 「范本里有三处值得留意，**它们都是前面几课挣来的**」——用「前面/上文/这些都」回指；
+ *   · 「这一句**来自第 8 课**」「第 16 课补的」——把回收摊成逐条溯源。
+ * 所以判据看的是**末段有没有一处把读者的视线拉回已讲过的内容**，而不是找固定词。 */
+const BACKREFERENCE = new RegExp([
+  '回到', '开头', '本节一开始', '上面那个', '前面那个', '一开始那个', '最初', '起先', '第一段',
+  '这个问题', '那个疑问', '这就是为什么', '所以.{0,6}多',
+  '前面.{0,8}(课|节|面)', '上文', '此前', '刚才.{0,6}(那|这)', '前面几',
+  '它们都', '这些都', '这三处', '这两处', '这三样', '这三条', '这三件',
+  '来自第', '第 ?\\d+ ?课(补|给|里)', '这是第 ?\\d+ ?课',
+].join('|'));
 
 function checkBackReference(section) {
   const first = firstProseParagraph(section);
@@ -120,18 +130,44 @@ function checkEnumeration(section) {
 
 /* ── 判据 5：一段里新符号太多且没有具体计算 ─────────────────────────── */
 /* 只认**单字母或带下标的短符号**（f、D、w、p、N、n、W、HFOV、f_px）。
- * 不认 LaTeX 命令：`\frac`、`\cdot`、`\arctan` 是排版指令不是符号——把它们算进来，
- * 每一段有公式的正文都会超限，判据就废了。 */
-const LATEX_COMMAND = /^\\(?:frac|cdot|arctan|tan|sqrt|mathrm|text|times|div|approx|le|ge|neq|left|right|qquad|quad|Delta|mu|varepsilon|theta|omega|lambda|pi)$/;
+ *
+ * 两个坑，都实测踩过：
+ *  1. **LaTeX 命令不是符号**：`\frac`、`\cdot`、`\arctan` 是排版指令。不排除它们，
+ *     每一段有公式的正文都会超限，判据就废了。
+ *  2. **下标里的文字不是独立符号**：`k_{\text{B}}` 是一个符号（玻尔兹曼常数），
+ *     `L_{\text{d}}` 是一个符号（扩散长度）。第一版按 `[A-Za-z]+` 逐个抽词，把
+ *     `k_{\text{B}}T` 数成了 k、B、T 三个，一段的符号数虚增近一倍——真该报的节
+ *     反而因为"数太大"显得不可信。所以先把 `_{…}` 整块摘掉再抽。 */
+const LATEX_COMMAND = /^\\(?:frac|cdot|arctan|tan|sqrt|mathrm|text|times|div|approx|le|ge|neq|left|right|qquad|quad|Delta|mu|varepsilon|theta|omega|lambda|pi|tau)$/;
 const SYMBOL_TOKEN = /^[A-Za-z](?:_[A-Za-z0-9]+)?$|^[A-Z]{2,6}(?:_[A-Za-z0-9]+)?$/;
+
+/** 把 `_{…}`（可能嵌套）整块去掉，并记下它属于哪个主符号。 */
+function stripSubscripts(text) {
+  const names = [];
+  let depth = 0;
+  let out = '';
+  let buffer = '';
+  for (const ch of text) {
+    if (ch === '{' && depth === 0 && out.endsWith('_')) { depth = 1; buffer = ''; continue; }
+    if (depth > 0) {
+      if (ch === '{') depth += 1;
+      else if (ch === '}') { depth -= 1; if (depth === 0) { names.push(buffer); } }
+      else buffer += ch;
+      continue;
+    }
+    out += ch;
+  }
+  return { text: out, subscripts: names };
+}
 
 function countSymbols(paragraph) {
   const found = new Set();
   for (const match of paragraph.matchAll(/`([A-Za-z_][\w.]*)`/g)) {
     if (SYMBOL_TOKEN.test(match[1])) found.add(match[1]);
   }
-  for (const match of paragraph.matchAll(/\$([^$\n]{1,60})\$/g)) {
-    for (const token of match[1].matchAll(/\\[A-Za-z]+|[A-Za-z]+/g)) {
+  for (const match of paragraph.matchAll(/\$([^$\n]{1,80})\$/g)) {
+    const { text } = stripSubscripts(match[1]);
+    for (const token of text.matchAll(/\\[A-Za-z]+|[A-Za-z]+/g)) {
       const word = token[0];
       if (word.startsWith('\\')) {
         if (LATEX_COMMAND.test(word)) continue;
@@ -144,21 +180,39 @@ function countSymbols(paragraph) {
   return found;
 }
 
-function checkSymbolFlood(section) {
+function checkSymbolFlood(section, alreadySeen = new Set()) {
   const issues = [];
   let calculated = false;
+  const seen = new Set(alreadySeen);
   for (const paragraph of section.paragraphs) {
     // "做过具体计算"：出现等号且右边是数字，或两个数之间出现了乘除
     if (/=\s*-?[\d.]/.test(paragraph) || /[\d.]\s*[×÷*/]\s*[\d.]/.test(paragraph)) calculated = true;
-    if (calculated) continue;
-    const symbols = countSymbols(paragraph);
-    if (symbols.size > 3) {
-      issues.push({ 判据: '符号', 级: '提醒', 节: section.title,
-        说: `还没做过一次具体计算，这一段就进了 ${symbols.size} 个符号（${[...symbols].slice(0, 6).join('、')}…）。一次别进太多——先给一个能算出数的例子，把符号挂上去。` });
-      break;
-    }
+    const symbols = [...countSymbols(paragraph)];
+    // **只数全文首次出现**：同一个符号在 §2 交代、在 §7 的练习卡里再用，那不是"新进"。
+    // 判据的原话是「新符号出现的那一段」，不是「这一段里出现了几个符号」。
+    const fresh = symbols.filter((symbol) => !seen.has(symbol));
+    for (const symbol of symbols) seen.add(symbol);
+    if (calculated || fresh.length <= 3) continue;
+    issues.push({ 判据: '符号', 级: '提醒', 节: section.title,
+      说: `还没做过一次具体计算，这一段就进了 ${fresh.length} 个首次出现的符号（${fresh.slice(0, 6).join('、')}…）。一次别进太多——先给一个能算出数的例子，或者像「含义 / 单位 / 取值」那样先摆一张表，把符号挂上去。` });
+    break;
   }
   return issues;
+}
+
+/** 全文档级别的符号出现顺序：第几段第一次见到这个符号。 */
+function symbolFirstSeen(markdown) {
+  const order = new Map();
+  let index = 0;
+  for (const section of sections(markdown)) {
+    for (const paragraph of section.paragraphs) {
+      for (const symbol of countSymbols(paragraph)) {
+        if (!order.has(symbol)) order.set(symbol, index);
+      }
+      index += 1;
+    }
+  }
+  return order;
 }
 
 /* ── 判据 6：类比没有断点声明 ────────────────────────────────────────── */
@@ -184,14 +238,24 @@ function checkAnalogy(section) {
 
 export function inspect(markdown) {
   const found = [];
+  const firstSeen = symbolFirstSeen(markdown);
+  const seen = new Set();
   for (const section of sections(markdown)) {
     for (const check of [checkOpener, checkBackReference, checkLength, checkEnumeration, checkSymbolFlood, checkAnalogy]) {
+      if (check === checkSymbolFlood) continue;
       const result = check(section);
       if (!result) continue;
       if (Array.isArray(result)) found.push(...result);
       else found.push(result);
     }
+    // 符号判据要带着「到这里为止已经见过哪些符号」进去
+    const result = checkSymbolFlood(section, seen);
+    found.push(...result);
+    for (const paragraph of section.paragraphs) {
+      for (const symbol of countSymbols(paragraph)) seen.add(symbol);
+    }
   }
+  void firstSeen;
   return found;
 }
 
